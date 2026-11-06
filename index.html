@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Apontamento</title>
+<style>
+:root{--lime:#CDFF00;--limeD:#708C00;--limeL:#F3FFCC;--dark:#1C1E1A;--bg:#F5F6F2;--bd:#D6DAD0;--tx:#1C1E1A;--tx2:#686E64;--okL:#D6F0E0;--warn:#E6A800;--warnL:#FFF3CD;--err:#DC3545;--errL:#FFE4E6}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--tx);background:#E9EBE4;display:flex;justify-content:center}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{width:100%;max-width:520px;min-height:100vh;background:var(--bg);display:flex;flex-direction:column;box-shadow:0 0 30px rgba(0,0,0,.12)}
+.hd{background:var(--dark);color:var(--lime);display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:5px solid var(--lime);min-height:66px;position:sticky;top:0;z-index:2}
+.hd .t{font-size:20px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{background:none;border:0;color:var(--lime);font-size:26px;cursor:pointer;padding:0 6px 0 0;line-height:1}
+.body{flex:1;padding:14px 18px}
+.foot{padding:10px 18px 18px;position:sticky;bottom:0;background:var(--bg)}
+.lbl{font-size:13px;color:var(--tx2);margin:10px 0 4px}
+.in,.sel{width:100%;height:48px;border:1px solid var(--bd);border-radius:8px;background:#fff;padding:0 12px;font-size:17px}
+textarea.in{height:auto;min-height:80px;padding:10px 12px;resize:vertical}
+.in:focus,.sel:focus{outline:none;border:2px solid var(--limeD)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hm{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btn{width:100%;min-height:58px;border-radius:12px;border:0;background:var(--lime);color:var(--dark);font-size:19px;font-weight:600;cursor:pointer;padding:0 14px}
+.btn:hover{filter:brightness(.94)}
+.btn:disabled{background:var(--bd);color:var(--tx2);cursor:not-allowed;filter:none}
+.btn.sec{background:#fff;border:2px solid var(--dark)}
+.btn.big{min-height:96px;font-size:22px;margin-bottom:14px}
+.btn.sm{min-height:40px;font-size:15px;width:auto;padding:0 16px}
+.btn.warnb{background:var(--warnL);border:2px solid var(--warn)}
+.info{background:var(--limeL);border:1px solid var(--limeD);border-radius:8px;padding:10px 12px;font-size:15px;margin-top:10px}
+.box{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:10px 12px;font-size:15px}
+.warn{background:var(--warnL);border:1px solid var(--warn);border-radius:8px;padding:10px 12px;font-size:14.5px;margin-top:8px}
+.card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:11px 13px;margin-bottom:8px;cursor:pointer}
+.card.sel{background:var(--limeL);border:3px solid var(--limeD);padding:9px 11px}
+.l1{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.chip{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--bg);white-space:nowrap}
+.chip.on{background:var(--lime)}.chip.cs{background:var(--warnL)}.chip.ok{background:var(--okL)}
+.muted{color:var(--tx2);font-size:13.5px}
+.big1{font-size:23px;font-weight:600}
+.ordem{background:var(--lime);border:2px solid var(--dark);font-size:34px;font-weight:700;padding:14px;margin:8px 0 14px;text-align:center;letter-spacing:1px}
+.ok{text-align:center;padding-top:16px}.ok .chk{font-size:64px;color:var(--limeD);line-height:1}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:14px;white-space:nowrap}
+td,th{padding:9px 8px;border-bottom:1px solid var(--bd);text-align:left}th{font-size:11px;color:var(--tx2);text-transform:uppercase}
+.num{text-align:right}
+.tw{border:1px solid var(--bd);border-radius:10px;overflow:auto}
+.empty{padding:22px;text-align:center;color:var(--tx2)}
+.tot{font-size:18px;font-weight:600;margin:10px 0}
+.pin{font-size:24px;letter-spacing:8px}.pin::placeholder{letter-spacing:normal;font-size:16px}
+.adm h3{margin:18px 0 6px;font-size:16px}
+.adm table input,.adm table select{width:100%;height:36px;border:1px solid var(--bd);border-radius:6px;padding:0 6px;font-size:14px}
+.linkbtn{background:none;border:0;color:var(--tx2);text-decoration:underline;cursor:pointer;font-size:13px;padding:6px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--dark);color:var(--lime);padding:11px 18px;border-radius:9px;font-size:15px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9;max-width:90%;text-align:center}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+/* ======================================================================
+   ERP Produção – App do Operador (versão HTML, sem servidor)
+   Os dados ficam guardados neste navegador, neste aparelho.
+   No fim do turno, "Exportar turno" grava arquivos CSV na pasta escolhida
+   (ex.: a pasta PRODUÇÃO sincronizada pelo OneDrive).
+   ====================================================================== */
+const CAD0 = {"maq": [], "mat": [], "mot": []};
+const ACOND0 = ["BAG","FARDO","PALETE","SACARIA"];
+const KEY = "erp-producao-operador-v1";
+const VERSAO = "1.0";
+
+/* ---------------- armazenamento ---------------- */
+function novo(){return {cfg:{dev:"01",adminPin:"",pastaNome:""},users:[],cad:{maq:CAD0.maq.slice(),mat:CAD0.mat.slice(),mot:CAD0.mot.map(m=>m.slice()),acond:ACOND0.slice()},
+  seqO:0,seqL:0,seqP:0,ordens:[],lanc:[],paradas:[],exports:[]}}
+let S=carregar();
+function carregar(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.cfg&&v.lanc)return v}catch(e){}return novo()}
+let storageOk=true;
+function salvar(){try{localStorage.setItem(KEY,JSON.stringify(S));storageOk=true}catch(e){storageOk=false;toast("⚠ Não foi possível salvar neste navegador. Exporte agora.")}}
+
+/* pasta de exportação (File System Access API) guardada em IndexedDB */
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open("erp-producao-handles",1);r.onupgradeneeded=()=>r.result.createObjectStore("h");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function hGet(k){try{const db=await idb();return await new Promise(r=>{const q=db.transaction("h").objectStore("h").get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)})}catch(e){return null}}
+async function hSet(k,v){try{const db=await idb();await new Promise(r=>{const t=db.transaction("h","readwrite");t.objectStore("h").put(v,k);t.oncomplete=r;t.onerror=r})}catch(e){}}
+
+/* ---------------- utilitários ---------------- */
+const $=s=>document.querySelector(s);
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function pad(n,w=2){return String(n).padStart(w,"0")}
+function isoD(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function isoDT(d){return isoD(d)+"T"+pad(d.getHours())+":"+pad(d.getMinutes())}
+function today(){return isoD(new Date())}
+function addDays(iso,n){const d=new Date(iso+"T12:00");d.setDate(d.getDate()+n);return isoD(d)}
+function nowIso(){return isoDT(new Date())}
+function br(iso){if(!iso)return"";const[a,b]=iso.split("T");const[y,m,d]=a.split("-");return d+"/"+m+"/"+y+(b?" "+b:"")}
+function brc(iso){if(!iso)return"";const[a,b]=iso.split("T");const[y,m,d]=a.split("-");return d+"/"+m+(b?" "+b:"")}
+function hh(iso){return iso?iso.slice(11,16):""}
+function kg(n){return Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function num(s){const v=parseFloat(String(s??"").replace(/\./g,"").replace(",","."));return isNaN(v)?0:v}
+function mins(a,b){return Math.round((new Date(b)-new Date(a))/60000)}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3000)}
+function opts(list,sel,ph){return (ph!==undefined?`<option value="">${esc(ph)}</option>`:"")+list.map(v=>`<option${v==sel?" selected":""}>${esc(v)}</option>`).join("")}
+function hourOpts(sel){return Array.from({length:24},(_,i)=>`<option value="${i}"${i==sel?" selected":""}>${pad(i)}</option>`).join("")}
+function minOpts(sel){return Array.from({length:12},(_,i)=>i*5).map(m=>`<option value="${m}"${m==sel?" selected":""}>${pad(m)}</option>`).join("")}
+function oprNum(n){return "OPR-"+S.cfg.dev+"-"+pad(n,6)}
+
+/* ---------------- estado da tela ---------------- */
+let UI={tela:"login",u:null,sel:null,pin:"",busca:"",form:{},h:{},par:{},meusSel:null,pedido:"",buscaMeus:"",confEnc:false,ultima:null,admOk:false,admPin:"",admTab:"op"};
+function user(){return S.users.find(x=>x.id===UI.u)}
+function ordemAberta(uid){const id=uid??UI.u;return S.ordens.filter(o=>o.uid===id&&o.status==="Aberta").sort((a,b)=>b.n-a.n)[0]}
+function linhasDe(o){return S.lanc.filter(l=>l.ordem===o.num).sort((a,b)=>b.ini.localeCompare(a.ini))}
+function pendentes(){return {l:S.lanc.filter(l=>!l.exp).length,p:S.paradas.filter(p=>!p.exp).length}}
+
+/* hora do lançamento: data da ordem + h:min; se ficar mais de 12 h antes da abertura, é do dia seguinte */
+function horaOrdem(o,h){let i0=o.data+"T"+pad(h.hi)+":"+pad(h.mi);const f0=o.data+"T"+pad(h.hf)+":"+pad(h.mf);
+  let dur=mins(i0,f0);if(dur<0)dur+=1440;
+  if(new Date(i0)<new Date(new Date(o.abertura).getTime()-720*60000))i0=addDays(o.data,1)+i0.slice(10);
+  const f=new Date(new Date(i0).getTime()+dur*60000);return{ini:i0,fim:isoDT(f),dur}}
+function span(data,hi,mi,hf,mf){const ini=data+"T"+pad(hi)+":"+pad(mi);let fd=data;if(+hf*60+ +mf< +hi*60+ +mi)fd=addDays(data,1);const fim=fd+"T"+pad(hf)+":"+pad(mf);return{ini,fim,dur:mins(ini,fim)}}
+
+/* ---------------- telas ---------------- */
+function hd(t,back,extra){return `<div class="hd">${back?`<button class="back" data-go="${back}" aria-label="Voltar">←</button>`:""}<div class="t">${esc(t)}</div>${extra||""}</div>`}
+const SAIR=`<button class="btn sm" data-act="sair">Sair</button>`;
+
+function tela(){
+  const u=user();if(!u&&!["login","admin"].includes(UI.tela))UI.tela="login";
+  switch(UI.tela){
+  case "login":{
+    const q=UI.busca.trim().toLowerCase();const us=S.users.filter(x=>x.ativo&&(!q||x.nome.toLowerCase().includes(q))).sort((a,b)=>a.nome.localeCompare(b.nome));
+    const sel=S.users.find(x=>x.id===UI.sel);const pend=pendentes();const abertas=S.ordens.filter(o=>o.status==="Aberta");
+    return hd("Quem está lançando?")+`<div class="body">
+    ${S.users.length&&!S.cad.maq.length?`<div class="warn">Cadastros não carregados. Procure o responsável.</div>`:""}
+    ${!S.users.length?`<div class="warn">Aparelho ainda não configurado. Procure o responsável.</div>`:""}
+    <input class="in" id="busca" value="${esc(UI.busca)}" placeholder="Buscar meu nome" style="margin-bottom:10px">
+    ${us.map(x=>`<div class="card${x.id===UI.sel?" sel":""}" data-sel="${x.id}"><div class="l1"><span><b style="font-size:17px">${esc(x.nome)}</b><br><span class="muted">Turno ${esc(x.turno)}</span></span>${ordemAberta(x.id)?`<span class="chip on">Ordem aberta</span>`:""}</div></div>`).join("")}
+    <div class="lbl">${sel?"PIN de "+esc(sel.nome):"Toque no seu nome"}</div>
+    <input class="in pin" id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" value="${esc(UI.pin)}" placeholder="PIN (4 dígitos)">
+    <div class="box" style="margin-top:16px"><b>Fim do turno</b><div class="muted" style="margin:4px 0 8px">${pend.l} hora(s) e ${pend.p} parada(s) ainda não exportadas${abertas.length?` · ${abertas.length} ordem(ns) aberta(s)`:""}.</div>
+      <button class="btn sec" data-act="exportar">Exportar turno</button></div>
+    <div style="text-align:center;margin-top:10px"><button class="linkbtn" data-go="admin">${S.cfg.adminPin?"Administração":"Configurar este aparelho"}</button></div></div>
+    <div class="foot"><button class="btn" data-act="entrar"${sel&&UI.pin.length===4?"":" disabled"}>Entrar</button></div>`}
+  case "inicio":{
+    const o=ordemAberta();const hoje=S.lanc.filter(l=>l.uid===u.id&&l.data===today()).length;
+    return hd("ERP Produção",null,SAIR)+`<div class="body"><div class="big1">Olá, ${esc(u.nome)}</div><div class="muted" style="margin-bottom:14px">Turno ${esc(u.turno)} · ${br(today())}</div>
+    <div class="${o?"info":"box"}" style="margin:0 0 6px">${o?`Ordem aberta: <b>${o.num}</b><br>${esc(o.maq)} · Turno ${esc(o.turno)} · ${brc(o.data)}`:"Nenhuma ordem aberta"}</div>
+    ${o&&o.data<today()?`<div class="warn">⚠ Esta ordem é de outro dia. Encerre e abra uma nova.</div>`:""}
+    <button class="btn big" style="margin-top:12px" data-go="${o?"ordem":"abrir"}">${o?"Lançar hora na "+o.num:"Abrir ordem de processo"}</button>
+    <button class="btn big sec" data-go="parada">Registrar parada</button>
+    <button class="btn big sec" data-go="meus">Meus lançamentos</button>
+    <p class="muted" style="text-align:center">Hoje: ${hoje} hora(s) lançada(s)</p></div>`}
+  case "abrir":{
+    const f=UI.form;f.data??=today();f.turno??=u.turno;f.maq??="";f.mat??="";const ok=f.turno&&f.maq&&f.mat;
+    return hd("Abrir ordem de processo","inicio")+`<div class="body">
+    <div class="lbl">Data da produção</div><input class="in" type="date" data-f="data" value="${f.data}">
+    <div class="lbl">Turno *</div><select class="sel" data-f="turno">${opts(["1º","2º"],f.turno,"")}</select>
+    <div class="lbl">Máquina *</div><select class="sel" data-f="maq">${opts(S.cad.maq,f.maq,"Selecione…")}</select>
+    <div class="lbl">Material *</div><select class="sel" data-f="mat">${opts(S.cad.mat,f.mat,"Selecione…")}</select>
+    <div class="info" style="margin-top:16px">Uma ordem por máquina e turno. O número é gerado agora e vale para todas as horas que você lançar até encerrar a ordem no fim do turno.</div></div>
+    <div class="foot"><button class="btn" data-act="abrirOrdem"${ok?"":" disabled"}>Abrir ordem</button></div>`}
+  case "ordem":{
+    const o=ordemAberta();if(!o){UI.tela="inicio";return tela()}
+    const L=linhasDe(o);const h=UI.h;
+    if(h.hi===undefined){if(L.length){h.hi=+hh(L[0].fim).slice(0,2);h.mi=+hh(L[0].fim).slice(3)}else{h.hi=new Date().getHours();h.mi=0}h.hf=(h.hi+1)%24;h.mf=h.mi}
+    h.peso??="";h.qtd??="";h.acond??=(L[0]&&L[0].acond)||"";h.obs??="";
+    const sp=horaOrdem(o,h);const dup=L.some(l=>l.ini===sp.ini);const tot=L.reduce((s,l)=>s+l.peso,0);
+    return hd("Ordem "+o.num,"inicio",SAIR)+`<div class="body">
+    <div class="info" style="margin-top:0">${esc(o.maq)} · Turno ${esc(o.turno)} · ${brc(o.data)}<br>${esc(o.mat)}</div>
+    <div class="tot">Lançado: ${L.length} hora(s) · ${kg(tot)} kg</div>
+    <div class="row2"><div><div class="lbl">Hora início (h : min)</div><div class="hm"><select class="sel" data-h="hi">${hourOpts(h.hi)}</select><select class="sel" data-h="mi">${minOpts(h.mi)}</select></div></div>
+    <div><div class="lbl">Hora fim (h : min)</div><div class="hm"><select class="sel" data-h="hf">${hourOpts(h.hf)}</select><select class="sel" data-h="mf">${minOpts(h.mf)}</select></div></div></div>
+    <div class="row2"><div><div class="lbl">Peso da hora (kg) *</div><input class="in" inputmode="decimal" data-h="peso" value="${esc(h.peso)}" placeholder="0,00"></div>
+    <div><div class="lbl">Quantidade</div><input class="in" inputmode="numeric" data-h="qtd" value="${esc(h.qtd)}" placeholder="0"></div>
+    <div><div class="lbl">Acondicionamento *</div><select class="sel" data-h="acond">${opts(S.cad.acond,h.acond,"Selecione…")}</select></div>
+    <div><div class="lbl">Observação</div><input class="in" data-h="obs" value="${esc(h.obs)}" placeholder="Opcional"></div></div>
+    ${dup?`<div class="warn">⚠ Esta hora já foi lançada nesta ordem.</div>`:""}
+    <button class="btn" style="margin-top:12px" data-act="lancar"${h.acond&&num(h.peso)>0?"":" disabled"}>Lançar esta hora (${sp.dur} min)</button>
+    <div class="lbl" style="margin-top:14px">Horas lançadas nesta ordem</div>
+    <div class="tw"><table><tbody>${L.length?L.map(l=>`<tr><td><b>${hh(l.ini)}–${hh(l.fim)}</b></td><td class="num">${kg(l.peso)} kg</td><td>${esc(l.qtd)} ${esc(l.acond)}</td><td>${l.exp?`<span class="chip ok">exportado</span>`:`<span class="chip">no aparelho</span>`}</td></tr>`).join(""):`<tr><td class="empty">Nenhuma hora lançada ainda.</td></tr>`}</tbody></table></div></div>
+    <div class="foot"><button class="btn sec${UI.confEnc?" warnb":""}" data-act="encerrar">${UI.confEnc?"Toque de novo para confirmar":"Encerrar ordem (fim do turno)"}</button></div>`}
+  case "encerrada":{
+    const o=S.ordens.find(x=>x.num===UI.ultima);if(!o){UI.tela="inicio";return tela()}
+    return hd("Ordem encerrada")+`<div class="body ok"><div class="chk">✓</div><div class="muted" style="margin-top:10px">Ordem de processo</div>
+    <div class="ordem">${o.num}</div><div style="font-size:16px">${esc(o.maq)}<br>${esc(o.mat)}<br>Turno ${esc(o.turno)} · ${br(o.data)}</div>
+    <div style="font-size:21px;font-weight:700;margin:14px 0">${o.horas} hora(s) lançada(s) · ${kg(o.total)} kg</div>
+    <p class="muted">Anote o número na etiqueta. Com ele o PCP encontra todas as horas desta ordem.</p></div>
+    <div class="foot"><button class="btn" data-go="abrir" style="margin-bottom:8px">Abrir nova ordem</button><button class="btn sec" data-act="sair">Sair (próximo colaborador)</button></div>`}
+  case "parada":{
+    const p=UI.par;const h=new Date().getHours();const oa=ordemAberta();p.data??=today();p.maq??=(oa&&oa.maq)||"";p.mot??="";p.hi??=h;p.mi??=0;p.hf??=h;p.mf??=0;p.obs??="";
+    const sp=span(p.data,p.hi,p.mi,p.hf,p.mf);const ok=p.maq&&p.mot;
+    return hd("Registrar parada","inicio")+`<div class="body">
+    ${oa?`<div class="info" style="margin-top:0">Será ligada à ordem <b>${oa.num}</b></div>`:""}
+    <div class="lbl">Máquina *</div><select class="sel" data-p="maq">${opts(S.cad.maq,p.maq,"Selecione…")}</select>
+    <div class="lbl">Motivo da parada *</div><select class="sel" data-p="mot">${opts(S.cad.mot.map(m=>m[0]),p.mot,"Selecione…")}</select>
+    <div class="lbl">Data</div><input class="in" type="date" data-p="data" value="${p.data}">
+    <div class="row2"><div><div class="lbl">Início (h : min)</div><div class="hm"><select class="sel" data-p="hi">${hourOpts(p.hi)}</select><select class="sel" data-p="mi">${minOpts(p.mi)}</select></div></div>
+    <div><div class="lbl">Fim (h : min)</div><div class="hm"><select class="sel" data-p="hf">${hourOpts(p.hf)}</select><select class="sel" data-p="mf">${minOpts(p.mf)}</select></div></div></div>
+    <div class="lbl">Observação</div><textarea class="in" data-p="obs" placeholder="Descreva o que aconteceu">${esc(p.obs)}</textarea>
+    <div class="tot">Duração da parada: ${sp.dur} min</div></div>
+    <div class="foot"><button class="btn" data-act="salvarParada"${ok?"":" disabled"}>Registrar parada</button></div>`}
+  case "meus":{
+    const lim=addDays(today(),-30);const q=UI.buscaMeus.trim().toUpperCase();
+    const L=S.lanc.filter(l=>l.uid===u.id&&l.data>=lim&&(!q||l.ordem.includes(q))).sort((a,b)=>b.ini.localeCompare(a.ini));
+    const sel=S.lanc.find(l=>l.id===UI.meusSel);
+    return hd("Meus lançamentos","inicio")+`<div class="body">
+    <input class="in" id="buscaMeus" value="${esc(UI.buscaMeus)}" placeholder="Buscar nº da ordem (ex.: 000123)" style="margin-bottom:10px">
+    ${L.length?L.map(l=>`<div class="card${l.id===UI.meusSel?" sel":""}" data-meus="${l.id}"><div class="l1"><b>${l.ordem} <span style="font-weight:400;font-size:14px">${hh(l.ini)}–${hh(l.fim)}</span></b>${l.pedido?`<span class="chip cs">Correção pedida</span>`:l.exp?`<span class="chip ok">exportado</span>`:`<span class="chip">no aparelho</span>`}</div>
+      <div style="font-size:14px;margin-top:3px">${esc(l.maq)} · ${esc(l.mat)}</div><div class="muted">${kg(l.peso)} kg · ${esc(l.qtd)} ${esc(l.acond)} · ${brc(l.ini)}</div></div>`).join(""):`<div class="empty">Nenhum lançamento nos últimos 30 dias.</div>`}
+    <div class="lbl" style="margin-top:12px">${sel?"Pedir correção da hora "+hh(sel.ini)+"–"+hh(sel.fim)+" da ordem "+sel.ordem:"Selecione um lançamento acima para pedir correção"}</div>
+    <textarea class="in" id="pedido" placeholder="Descreva o que precisa ser corrigido (ex.: o peso certo é 115 kg)">${esc(UI.pedido)}</textarea></div>
+    <div class="foot"><button class="btn" data-act="pedir"${sel&&UI.pedido.trim()?"":" disabled"}>Pedir correção</button></div>`}
+  case "admin": return telaAdmin();
+  }
+}
+
+/* ---------------- administração ---------------- */
+function telaAdmin(){
+  if(!S.cfg.adminPin)return hd("Configuração inicial","login")+`<div class="body"><div class="info" style="margin-top:0">Primeiro acesso neste aparelho. Crie o PIN do administrador (de 4 a 8 dígitos). Guarde-o: ele protege os cadastros e as configurações.</div>
+    <div class="lbl">Novo PIN do administrador</div><input class="in pin" id="admNovo1" type="password" inputmode="numeric" maxlength="8" autocomplete="off">
+    <div class="lbl">Repita o PIN</div><input class="in pin" id="admNovo2" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></div>
+    <div class="foot"><button class="btn" data-act="admCriar">Criar PIN e continuar</button></div>`;
+  if(!UI.admOk)return hd("Administração","login")+`<div class="body"><div class="lbl">PIN do administrador</div>
+    <input class="in pin" id="admPin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" value="${esc(UI.admPin)}" placeholder="PIN do administrador">
+</div><div class="foot"><button class="btn" data-act="admEntrar">Entrar</button></div>`;
+  const t=UI.admTab;const tabs=[["op","Operadores"],["cad","Cadastros"],["cfg","Aparelho"],["dados","Dados"]];
+  let c="";
+  if(t=="op")c=`<h3>Operadores</h3><p class="muted">Nome, turno padrão e PIN de 4 dígitos (diferente para cada pessoa). Desative em vez de apagar.</p>
+    <div class="tw"><table><thead><tr><th>Nome</th><th>Turno</th><th>PIN</th><th>Ativo</th></tr></thead><tbody>
+    ${S.users.map(x=>`<tr><td><input data-u="${x.id}" data-k="nome" value="${esc(x.nome)}"></td><td><select data-u="${x.id}" data-k="turno">${opts(["1º","2º"],x.turno)}</select></td>
+      <td><input data-u="${x.id}" data-k="pin" value="${esc(x.pin)}" maxlength="4" inputmode="numeric" style="width:70px"></td><td><input type="checkbox" data-u="${x.id}" data-k="ativo"${x.ativo?" checked":""} style="width:22px;height:22px"></td></tr>`).join("")}
+    </tbody></table></div><button class="btn sec" style="margin-top:10px" data-act="addUser">+ Adicionar operador</button>`;
+  if(t=="cad")c=`<h3>Carregar de arquivo</h3><p class="muted">Escolha o arquivo <b>cadastros_erp.json</b> (fica no seu OneDrive, não no site). Substitui máquinas, materiais, motivos e acondicionamento.</p>
+    <input type="file" id="cadArq" accept=".json" class="in" style="padding-top:10px">
+    <h3>Máquinas</h3><p class="muted">Uma por linha.</p><textarea class="in" rows="7" data-cad="maq">${esc(S.cad.maq.join("\n"))}</textarea>
+    <h3>Materiais</h3><textarea class="in" rows="7" data-cad="mat">${esc(S.cad.mat.join("\n"))}</textarea>
+    <h3>Motivos de parada</h3><p class="muted">Formato: MOTIVO ; TIPO</p><textarea class="in" rows="9" data-cad="mot">${esc(S.cad.mot.map(m=>m[0]+" ; "+m[1]).join("\n"))}</textarea>
+    <h3>Acondicionamento</h3><textarea class="in" rows="4" data-cad="acond">${esc(S.cad.acond.join("\n"))}</textarea>
+    <button class="btn" style="margin-top:12px" data-act="salvarCad">Salvar cadastros</button>`;
+  if(t=="cfg")c=`<h3>Código do aparelho</h3><p class="muted">Entra no número da ordem (OPR-<b>${esc(S.cfg.dev)}</b>-000001). Use um código diferente em cada aparelho.</p>
+    <input class="in" data-cfg="dev" value="${esc(S.cfg.dev)}" maxlength="3" style="max-width:120px">
+    <h3>Pasta de exportação</h3><p class="muted">Escolha a pasta PRODUÇÃO (ou uma subpasta EXPORTACOES) sincronizada pelo OneDrive. Atual: <b>${esc(S.cfg.pastaNome||"nenhuma (os arquivos vão para Downloads)")}</b></p>
+    <button class="btn sec" data-act="escolherPasta">Escolher pasta</button>
+    <h3>PIN do administrador</h3><input class="in" data-cfg="adminPin" value="${esc(S.cfg.adminPin)}" maxlength="8" inputmode="numeric" style="max-width:160px">
+    <button class="btn" style="margin-top:14px" data-act="salvarCfg">Salvar</button>`;
+  if(t=="dados"){const pend=pendentes();c=`<h3>Situação</h3><div class="box">${S.ordens.length} ordem(ns) · ${S.lanc.length} hora(s) · ${S.paradas.length} parada(s) neste aparelho.<br>Não exportados: ${pend.l} hora(s) e ${pend.p} parada(s).</div>
+    <h3>Exportações feitas</h3><div class="tw"><table><tbody>${S.exports.slice(-15).reverse().map(e=>`<tr><td>${br(e.quando)}</td><td>${esc(e.arquivo)}</td><td class="num">${e.linhas}</td></tr>`).join("")||`<tr><td class="empty">Nenhuma ainda.</td></tr>`}</tbody></table></div>
+    <h3>Reexportar tudo</h3><p class="muted">Gera de novo os arquivos com todos os lançamentos guardados (útil se um arquivo se perdeu). O PCP ignora o que já tinha importado.</p>
+    <button class="btn sec" data-act="exportarTudo">Reexportar tudo</button>
+    <h3>Backup e limpeza</h3><p class="muted">Lançamentos exportados há mais de 60 dias são apagados deste aparelho automaticamente.</p>
+    <button class="btn sec" data-act="backup">Baixar backup completo (JSON)</button>
+    <div class="lbl">Restaurar backup</div><input type="file" id="restaurar" accept=".json" class="in" style="padding-top:10px">`}
+  return hd("Administração","login")+`<div class="body adm"><div style="display:flex;gap:6px;flex-wrap:wrap">${tabs.map(([k,n])=>`<button class="btn sm${t==k?"":" sec"}" data-admtab="${k}">${n}</button>`).join("")}</div>${c}</div>`;
+}
+
+/* ---------------- exportação ---------------- */
+function csvCell(v){v=String(v??"");return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function csv(rows,cols){return "﻿"+cols.join(";")+"\r\n"+rows.map(r=>cols.map(c=>csvCell(r[c])).join(";")).join("\r\n")+"\r\n"}
+const COLS_L=["ID","Ordem","DataProducao","Turno","Maquina","Material","HoraInicio","HoraFim","DuracaoMin","PesoKg","Quantidade","Acondicionamento","Observacao","Operador","StatusOrdem","PedidoCorrecao","Aparelho","LancadoEm"];
+const COLS_P=["ID","Ordem","Maquina","Motivo","Tipo","DataProducao","Inicio","Fim","DuracaoMin","Operador","Observacao","Aparelho","LancadoEm"];
+function linhaL(l){const o=S.ordens.find(x=>x.num===l.ordem)||{};return{ID:l.id,Ordem:l.ordem,DataProducao:br(l.data),Turno:l.turno,Maquina:l.maq,Material:l.mat,HoraInicio:br(l.ini),HoraFim:br(l.fim),DuracaoMin:l.dur,
+  PesoKg:String(l.peso).replace(".",","),Quantidade:l.qtd,Acondicionamento:l.acond,Observacao:l.obs,Operador:l.nome,StatusOrdem:o.status||"",PedidoCorrecao:l.pedido||"",Aparelho:S.cfg.dev,LancadoEm:br(l.criado)}}
+function linhaP(p){const t=(S.cad.mot.find(m=>m[0]===p.mot)||[])[1]||"";return{ID:p.id,Ordem:p.ordem,Maquina:p.maq,Motivo:p.mot,Tipo:t,DataProducao:br(p.data),Inicio:br(p.ini),Fim:br(p.fim),DuracaoMin:p.dur,Operador:p.nome,Observacao:p.obs,Aparelho:S.cfg.dev,LancadoEm:br(p.criado)}}
+async function gravar(nome,conteudo){
+  const handle=await hGet("pasta");
+  if(handle&&handle.getFileHandle){try{
+    let perm=await handle.queryPermission({mode:"readwrite"});if(perm!=="granted")perm=await handle.requestPermission({mode:"readwrite"});
+    if(perm==="granted"){const fh=await handle.getFileHandle(nome,{create:true});const w=await fh.createWritable();await w.write(new Blob([conteudo],{type:"text/csv"}));await w.close();return "pasta"}
+  }catch(e){console.warn(e)}}
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([conteudo],{type:"text/csv;charset=utf-8"}));a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);return "downloads";
+}
+async function exportar(tudo){
+  const L=S.lanc.filter(l=>tudo||!l.exp),P=S.paradas.filter(p=>tudo||!p.exp);
+  if(!L.length&&!P.length){toast("Nada novo para exportar.");return}
+  const d=new Date();const stamp=isoD(d)+"_"+pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds());const base="AP"+S.cfg.dev+"_"+stamp;
+  let onde="";
+  if(L.length)onde=await gravar("LANCAMENTOS_"+base+".csv",csv(L.map(linhaL),COLS_L));
+  if(P.length)onde=await gravar("PARADAS_"+base+".csv",csv(P.map(linhaP),COLS_P));
+  L.forEach(l=>l.exp=true);P.forEach(p=>p.exp=true);
+  S.exports.push({quando:nowIso(),arquivo:base,linhas:L.length+P.length});limpar();salvar();
+  toast(`Exportado: ${L.length} hora(s) e ${P.length} parada(s) → ${onde=="pasta"?"pasta "+(S.cfg.pastaNome||""):"Downloads"}`);render();
+}
+function limpar(){const lim=addDays(today(),-60);S.lanc=S.lanc.filter(l=>!(l.exp&&l.data<lim));S.paradas=S.paradas.filter(p=>!(p.exp&&p.data<lim));
+  S.ordens=S.ordens.filter(o=>o.status==="Aberta"||o.data>=lim)}
+
+/* ---------------- ações ---------------- */
+const ACT={
+  entrar(){const x=S.users.find(y=>y.id===UI.sel);if(!x||x.pin!==UI.pin){toast("PIN incorreto.");UI.pin="";return}
+    UI.u=x.id;UI.sel=null;UI.pin="";UI.busca="";UI.form={};UI.h={};UI.meusSel=null;UI.pedido="";UI.tela=ordemAberta()?"ordem":"inicio";toast("Olá, "+x.nome.split(" ")[0]+"!")},
+  sair(){UI.u=null;UI.tela="login";UI.confEnc=false;UI.h={};UI.form={};UI.par={};toast("Aparelho liberado para o próximo colaborador.")},
+  abrirOrdem(){const u=user(),f=UI.form;S.seqO++;const o={n:S.seqO,num:oprNum(S.seqO),uid:u.id,nome:u.nome,data:f.data,turno:f.turno,maq:f.maq,mat:f.mat,status:"Aberta",abertura:nowIso(),encerramento:"",total:0,horas:0};
+    S.ordens.push(o);salvar();UI.form={};UI.h={};UI.tela="ordem";toast("Ordem "+o.num+" aberta.")},
+  lancar(){const u=user(),o=ordemAberta(),h=UI.h,sp=horaOrdem(o,h);S.seqL++;
+    S.lanc.push({id:S.cfg.dev+"-L"+pad(S.seqL,6),ordem:o.num,uid:u.id,nome:u.nome,data:o.data,turno:o.turno,maq:o.maq,mat:o.mat,ini:sp.ini,fim:sp.fim,dur:sp.dur,peso:num(h.peso),qtd:h.qtd?parseInt(h.qtd,10):"",acond:h.acond,obs:h.obs,criado:nowIso(),exp:false,pedido:""});
+    salvar();toast("Hora "+hh(sp.ini)+"–"+hh(sp.fim)+" lançada: "+h.peso+" kg");UI.h={acond:h.acond};UI.confEnc=false},
+  encerrar(){if(!UI.confEnc){UI.confEnc=true;return}const o=ordemAberta();const L=linhasDe(o);o.status="Encerrada";o.encerramento=nowIso();o.total=L.reduce((s,l)=>s+l.peso,0);o.horas=L.length;
+    L.forEach(l=>l.exp=false);/* reexporta com StatusOrdem = Encerrada */
+    salvar();UI.confEnc=false;UI.ultima=o.num;UI.tela="encerrada"},
+  salvarParada(){const u=user(),p=UI.par,sp=span(p.data,p.hi,p.mi,p.hf,p.mf),oa=ordemAberta();S.seqP++;
+    S.paradas.push({id:S.cfg.dev+"-P"+pad(S.seqP,6),ordem:oa?oa.num:"",uid:u.id,nome:u.nome,maq:p.maq,mot:p.mot,data:p.data,ini:sp.ini,fim:sp.fim,dur:sp.dur,obs:p.obs,criado:nowIso(),exp:false});
+    salvar();UI.par={};UI.tela="inicio";toast("Parada registrada.")},
+  pedir(){const l=S.lanc.find(x=>x.id===UI.meusSel);l.pedido=UI.pedido.trim();l.exp=false;salvar();UI.pedido="";toast("Pedido registrado. Vai para o PCP na próxima exportação.")},
+  exportar(){exportar(false)},
+  exportarTudo(){exportar(true)},
+  admEntrar(){if(UI.admPin===S.cfg.adminPin){UI.admOk=true;UI.admPin="";if(S.cfg.adminPin==="0000"){UI.admTab="cfg";toast("Troque o PIN do administrador (0000).")}}else{toast("PIN incorreto.");UI.admPin=""}},
+  admCriar(){const a=($("#admNovo1")||{}).value||"",b=($("#admNovo2")||{}).value||"";
+    if(!/^\d{4,8}$/.test(a)){toast("O PIN deve ter de 4 a 8 números.");return}if(a!==b){toast("Os dois PINs não são iguais.");return}
+    if(a==="0000"||a==="1234"){toast("Escolha um PIN menos óbvio.");return}
+    S.cfg.adminPin=a;salvar();UI.admOk=true;UI.admTab="cad";toast("PIN criado. Agora carregue os cadastros e cadastre os operadores.")},
+  addUser(){S.users.push({id:"u"+Date.now(),nome:"Novo operador",turno:"1º",pin:"",ativo:true});salvar()},
+  salvarCad(){const g=k=>document.querySelector(`[data-cad="${k}"]`).value.split("\n").map(s=>s.trim()).filter(Boolean);
+    S.cad.maq=g("maq");S.cad.mat=g("mat");S.cad.acond=g("acond");S.cad.mot=g("mot").map(s=>{const[a,b]=s.split(";");return[a.trim(),(b||"").trim()]});salvar();toast("Cadastros salvos.")},
+  salvarCfg(){const dev=document.querySelector('[data-cfg="dev"]').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"");const pin=document.querySelector('[data-cfg="adminPin"]').value.trim();
+    if(!dev){toast("Informe o código do aparelho.");return}if(pin.length<4){toast("PIN do administrador com pelo menos 4 dígitos.");return}
+    S.cfg.dev=dev;S.cfg.adminPin=pin;salvar();toast("Configuração salva.")},
+  async escolherPasta(){if(!window.showDirectoryPicker){toast("Este navegador não permite escolher pasta. Use Edge ou Chrome no computador; os arquivos irão para Downloads.");return}
+    try{const h=await window.showDirectoryPicker({mode:"readwrite",id:"erp-export"});await hSet("pasta",h);S.cfg.pastaNome=h.name;salvar();toast("Pasta escolhida: "+h.name);render()}catch(e){}},
+  backup(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:"application/json"}));a.download="BACKUP_OPERADOR_AP"+S.cfg.dev+"_"+today()+".json";document.body.appendChild(a);a.click();a.remove()},
+};
+
+/* ---------------- eventos ---------------- */
+let rendering=false;
+function render(){if(rendering)return;rendering=true;try{$("#app").innerHTML=tela()}finally{rendering=false}}
+function chave(el){return el.id||JSON.stringify(el.dataset)}
+function suave(){const a=document.activeElement,k=a&&chave(a),s=a&&a.selectionStart;render();
+  const el=[...document.querySelectorAll("input,textarea,select")].find(x=>chave(x)===k);if(el){el.focus();try{if(s!=null)el.setSelectionRange(s,s)}catch(_){}}}
+document.addEventListener("click",async e=>{
+  const t=e.target.closest("[data-go],[data-act],[data-sel],[data-meus],[data-admtab]");if(!t||t.disabled)return;
+  if(t.dataset.go){UI.tela=t.dataset.go;UI.confEnc=false;if(t.dataset.go=="abrir")UI.form={};if(t.dataset.go=="ordem")UI.h={};if(t.dataset.go=="meus"){UI.meusSel=null;UI.pedido=""}if(t.dataset.go=="login")UI.admOk=false}
+  else if(t.dataset.act){await ACT[t.dataset.act]()}
+  else if(t.dataset.sel){UI.sel=t.dataset.sel;UI.pin=""}
+  else if(t.dataset.meus){UI.meusSel=t.dataset.meus}
+  else if(t.dataset.admtab){UI.admTab=t.dataset.admtab}
+  render();
+});
+function campo(e){const t=e.target;
+  if(t.id==="cadArq"&&e.type==="change"){const f=t.files[0];if(!f)return;f.text().then(x=>{try{const v=JSON.parse(x);if(!v.maq||!v.mat||!v.mot)throw 0;
+    S.cad.maq=v.maq;S.cad.mat=v.mat;S.cad.mot=v.mot;if(v.acond)S.cad.acond=v.acond;salvar();toast(`Cadastros carregados: ${v.maq.length} máquinas, ${v.mat.length} materiais, ${v.mot.length} motivos.`);render()}catch(_){toast("Arquivo de cadastros inválido.")}});return}
+  if(t.id==="restaurar"&&e.type==="change"){const f=t.files[0];if(!f)return;f.text().then(x=>{try{const v=JSON.parse(x);if(!v.cfg||!v.lanc)throw 0;S=v;salvar();toast("Backup restaurado.");render()}catch(_){toast("Arquivo de backup inválido.")}});return}
+  if(t.dataset.u){const x=S.users.find(y=>y.id===t.dataset.u);if(t.dataset.k==="ativo")x.ativo=t.checked;else if(t.dataset.k==="pin")x.pin=t.value.replace(/\D/g,"").slice(0,4);else x[t.dataset.k]=t.value;
+    if(e.type==="change"){const pins=S.users.filter(y=>y.ativo&&y.pin).map(y=>y.pin);if(new Set(pins).size!==pins.length)toast("⚠ Há PINs repetidos entre operadores.");salvar()}return}
+  if(t.dataset.cad||t.dataset.cfg)return;
+  let re=e.type==="change";
+  if(t.dataset.f!==undefined)UI.form[t.dataset.f]=t.value;
+  else if(t.dataset.h!==undefined){UI.h[t.dataset.h]=t.value;UI.confEnc=false;if(t.dataset.h==="hi")UI.h.hf=(+t.value+1)%24;if(t.dataset.h==="mi")UI.h.mf=+t.value}
+  else if(t.dataset.p!==undefined)UI.par[t.dataset.p]=t.value;
+  else if(t.id==="busca")UI.busca=t.value;
+  else if(t.id==="pin")UI.pin=t.value.replace(/\D/g,"").slice(0,4);
+  else if(t.id==="buscaMeus")UI.buscaMeus=t.value;
+  else if(t.id==="pedido")UI.pedido=t.value;
+  else if(t.id==="admPin")UI.admPin=t.value;
+  else return;
+  re?render():suave();
+}
+document.addEventListener("input",campo);document.addEventListener("change",campo);
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="pin"||e.target.id==="admPin")){const b=document.querySelector('[data-act="entrar"],[data-act="admEntrar"]');if(b&&!b.disabled)b.click()}});
+window.addEventListener("beforeunload",e=>{if(S.ordens.some(o=>o.status==="Aberta")||pendentes().l){/* dados ficam salvos; aviso só informativo */}});
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(_){}
+render();
+</script>
+</body>
+</html>
