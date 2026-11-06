@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Painel da Produção</title>
+<style>
+:root{--lime:#CDFF00;--limeD:#708C00;--limeL:#F3FFCC;--dark:#1C1E1A;--bg:#F5F6F2;--surface:#fcfcfb;--bd:#D6DAD0;--grid:#E6E8E1;
+  --tx:#1C1E1A;--tx2:#5a5f55;--tx3:#80857a;--s1:#5f7a00;--s2:#2a78d6;--good:#1a7f37;--goodL:#D6F0E0;--warn:#b25e00;--warnL:#FFF3CD;--crit:#c62828;--critL:#FFE4E6}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--tx);background:var(--bg)}
+button,select{font:inherit;color:inherit}
+.hd{background:var(--dark);color:var(--lime);display:flex;align-items:center;gap:14px;padding:12px 22px;border-bottom:5px solid var(--lime);flex-wrap:wrap}
+.hd .t{font-size:20px;font-weight:600}
+.hd .live{margin-left:auto;display:flex;align-items:center;gap:8px;color:#d9dccf;font-size:13px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 0 rgba(205,255,0,.7);animation:p 2s infinite}
+@keyframes p{0%{box-shadow:0 0 0 0 rgba(205,255,0,.6)}70%{box-shadow:0 0 0 8px rgba(205,255,0,0)}100%{box-shadow:0 0 0 0 rgba(205,255,0,0)}}
+.demo{background:var(--warnL);border-bottom:1px solid #e6c46a;padding:7px 22px;font-size:13px;color:#6b4a00}
+.wrap{padding:16px 22px 30px;max-width:1380px;margin:0 auto}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:9px;overflow:hidden;background:#fff}
+.seg button{border:0;background:transparent;padding:8px 14px;cursor:pointer;font-size:14px}
+.seg button.on{background:var(--dark);color:var(--lime);font-weight:600}
+.sel{height:38px;border:1px solid var(--bd);border-radius:9px;background:#fff;padding:0 10px;font-size:14px}
+.kpis{display:grid;grid-template-columns:2fr repeat(5,1fr);gap:12px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:12px 14px}
+.kpi .l{font-size:12.5px;color:var(--tx2)}
+.kpi .v{font-size:28px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12.5px;color:var(--tx2);margin-top:2px}
+.kpi.hero .v{font-size:38px}
+.bar{height:10px;border-radius:5px;background:var(--grid);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;border-radius:5px;background:var(--s1)}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle}
+.badge.good{background:var(--goodL);color:var(--good)}.badge.warn{background:var(--warnL);color:var(--warn)}.badge.crit{background:var(--critL);color:var(--crit)}
+.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
+.card{background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;min-width:0}
+.card h3{margin:0 0 2px;font-size:15px}
+.tw{overflow-x:auto}
+.card .sub{font-size:12.5px;color:var(--tx2);margin-bottom:8px}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--tx2);margin:2px 0 6px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sw.line{height:0;border-top:2px dashed var(--tx2);width:16px;border-radius:0}
+svg text{font-family:inherit}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--tx2);text-align:left;padding:7px 8px;border-bottom:1px solid var(--bd)}
+td{padding:8px;border-bottom:1px solid var(--grid);white-space:nowrap}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.tip{position:fixed;pointer-events:none;background:var(--dark);color:#fff;font-size:12.5px;padding:7px 10px;border-radius:8px;opacity:0;transition:opacity .12s;z-index:9;max-width:260px;line-height:1.4}
+.tip b{color:var(--lime)}
+.gate{position:fixed;inset:0;background:rgba(28,30,26,.94);display:flex;align-items:center;justify-content:center;z-index:20}
+.gate .box{background:#fff;border-radius:14px;padding:26px;width:min(380px,92vw)}
+.gate h2{margin:0 0 6px;font-size:20px}
+.gate input{width:100%;height:46px;border:1px solid var(--bd);border-radius:9px;padding:0 12px;font-size:18px;margin:12px 0}
+.gate button{width:100%;height:48px;border:0;border-radius:10px;background:var(--lime);font-weight:700;font-size:16px;cursor:pointer}
+.muted{color:var(--tx2);font-size:13px}
+.flash{animation:fl 1.2s}
+@keyframes fl{0%{background:var(--limeL)}100%{background:transparent}}
+.tabbtn{border:1px solid var(--bd);background:#fff;border-radius:8px;padding:4px 10px;font-size:12.5px;cursor:pointer;margin-left:6px}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi.hero{grid-column:1/-1}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="gate" id="gate"><div class="box"><h2>Painel da Produção</h2><div class="muted">Acesso restrito à diretoria.</div>
+<input id="senha" type="password" placeholder="Senha" autocomplete="off"><button id="entrar">Entrar</button>
+<p class="muted" id="gmsg" style="margin:12px 0 0"></p></div></div>
+<div class="hd"><div class="t">Painel da Produção · Diretoria</div><div class="live"><span class="dot"></span><span id="upd">Ao vivo</span></div></div>
+<div class="demo" id="aviso" style="display:none"></div>
+<div class="wrap">
+  <div class="filters">
+    <div class="seg" id="per"><button data-p="1" class="on">Hoje</button><button data-p="7">7 dias</button><button data-p="30">30 dias</button></div>
+    <select class="sel" id="fTurno"><option value="">Todos os turnos</option><option>1º</option><option>2º</option></select>
+    <select class="sel" id="fMaq"><option value="">Todas as máquinas</option></select>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid">
+    <div class="card"><h3 id="t1">Produção hora a hora</h3><div class="sub" id="s1"></div><div class="legend" id="lg1"></div><div id="c1"></div></div>
+    <div class="card"><h3>Produção por máquina</h3><div class="sub" id="s2">kg no período</div><div id="c2"></div></div>
+    <div class="card"><h3>Ordens abertas agora <span class="muted" id="nab"></span></h3><div class="sub">Operadores lançando neste turno</div><div id="c3"></div></div>
+    <div class="card"><h3>Paradas por motivo</h3><div class="sub" id="s4">minutos no período</div><div id="c4"></div></div>
+    <div class="card"><h3>Por operador</h3><div class="sub">kg, horas lançadas e média por hora</div><div id="c5"></div></div>
+    <div class="card"><h3>Acondicionamento e conferência</h3><div class="sub">unidades produzidas e situação no PCP</div><div id="c6"></div></div>
+  </div>
+</div>
+<div class="tip" id="tip"></div>
+<script src="config.js" onerror="void 0"></script>
+<script>
+"use strict";
+/* ---------- dados do servidor (planilha Google) ---------- */
+const pad=(n,w=2)=>String(n).padStart(w,"0");
+const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+let H=[],P=[],abertas={},MAQ=[],MAT={},META_DIA=0,HORAS_DIA=16,H_INI=6,H_FIM=22,META_H=0,TODAY=iso(new Date()),HNOW=new Date().getHours(),MNOW=new Date().getMinutes();
+const API=window.ERP_API||"";const KS="erp-painel-senha";
+let SENHA="";try{SENHA=sessionStorage.getItem(KS)||localStorage.getItem(KS)||""}catch(e){}
+let carregando=false,ultimoOk=0;
+async function carregar(){if(carregando)return;carregando=true;
+  try{const r=await fetch(API,{method:"POST",body:JSON.stringify({a:"painel",k:SENHA,dias:30})});const j=await r.json();if(!j.ok)throw new Error(j.erro||"Erro");
+    TODAY=j.agora.slice(0,10);HNOW=+j.agora.slice(11,13);MNOW=+j.agora.slice(14,16);
+    META_DIA=j.meta;HORAS_DIA=j.horasDia||16;H_INI=j.hIni;H_FIM=j.hFim;META_H=META_DIA?Math.round(META_DIA/HORAS_DIA):0;
+    H=j.L;P=j.P;MAQ=j.maquinas.length?j.maquinas:[...new Set(H.map(r=>r.m))];MAT={};H.forEach(r=>{if(!MAT[r.m])MAT[r.m]=r.mat});
+    abertas={};j.abertas.forEach(o=>abertas[o.ord]=o);
+    const sel=$("#fMaq");if(sel.options.length<=1)sel.innerHTML+=MAQ.map(m=>`<option>${esc(m)}</option>`).join("");
+    ultimoOk=Date.now();$("#aviso").style.display="none";return true}
+  catch(e){if(/negado/i.test(e.message))throw e;$("#aviso").style.display="";$("#aviso").textContent="Sem conexão com o servidor agora ("+e.message+"). Mostrando os últimos dados recebidos.";return false}
+  finally{carregando=false}}
+/* ---------- estado ---------- */
+let S={p:1,tu:"",m:""};
+const $=s=>document.querySelector(s);
+const fmt=n=>Math.round(n).toLocaleString("pt-BR");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function dentro(r){const lim=new Date(TODAY+"T12:00:00");lim.setDate(lim.getDate()-(S.p-1));return r.d>=iso(lim)&&(!S.tu||r.tu===S.tu)&&(!S.m||r.m===S.m)}
+/* ---------- gráficos SVG ---------- */
+function vbars(el,items,opt){ // items: [{x,label,parts:[{v,c,name}]}]
+  const W=el.clientWidth||600,Hh=240,ml=48,mr=10,mt=10,mb=28,iw=W-ml-mr,ih=Hh-mt-mb;
+  const max=Math.max(opt.ref||0,...items.map(i=>i.parts.reduce((s,p)=>s+p.v,0)))*1.12||1;
+  const step=niceStep(max/4);const ticks=[];for(let t=0;t<=max;t+=step)ticks.push(t);
+  const bw=Math.min(34,iw/items.length*0.62),gap=iw/items.length;
+  let s=`<svg width="${W}" height="${Hh}" role="img" aria-label="${esc(opt.aria)}">`;
+  ticks.forEach(t=>{const y=mt+ih-t/max*ih;s+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${ml-6}" y="${y+4}" font-size="11" text-anchor="end" fill="var(--tx3)">${fmt(t)}</text>`});
+  items.forEach((it,i)=>{const cx=ml+gap*i+gap/2;let y=mt+ih;const tot=it.parts.reduce((a,p)=>a+p.v,0);
+    it.parts.forEach((p,j)=>{if(!p.v)return;const h=p.v/max*ih;const top=j===it.parts.length-1||!it.parts.slice(j+1).some(q=>q.v);
+      s+=`<path d="${rbar(cx-bw/2,y-h,bw,h-(j?0:0),top?4:0)}" fill="${p.c}"/>`;y-=h+(h>3?2:0)});
+    s+=`<rect x="${cx-gap/2}" y="${mt}" width="${gap}" height="${ih}" fill="transparent" data-tip="<b>${esc(it.tip||it.label)}</b><br>${it.parts.filter(p=>p.v).map(p=>esc(p.name)+": "+fmt(p.v)+" kg").join("<br>")}${it.parts.length>1?"<br>Total: "+fmt(tot)+" kg":""}"/>`;
+    if(gap>=26||i%2===0)s+=`<text x="${cx}" y="${Hh-9}" font-size="11" text-anchor="middle" fill="var(--tx2)">${esc(it.label)}</text>`});
+  if(opt.ref){const y=mt+ih-opt.ref/max*ih;s+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="var(--tx2)" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${W-mr}" y="${y-5}" font-size="11" text-anchor="end" fill="var(--tx2)">${esc(opt.refLabel)}</text>`}
+  el.innerHTML=s+`</svg>`}
+function hbars(el,items,unit,color){const max=Math.max(...items.map(i=>i.v),1);
+  el.innerHTML=items.length?`<div style="display:grid;grid-template-columns:minmax(120px,190px) 1fr 70px;gap:7px 10px;align-items:center;font-size:13px">`+items.map(i=>`<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(i.label)}">${esc(i.label)}</div>
+    <div data-tip="<b>${esc(i.label)}</b><br>${fmt(i.v)} ${unit}${i.extra?"<br>"+esc(i.extra):""}" style="height:16px;background:var(--grid);border-radius:4px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:${i.v/max*100}%;background:${color};border-radius:4px"></div></div>
+    <div class="num">${fmt(i.v)} ${unit}</div>`).join("")+`</div>`:`<p class="muted">Sem dados no filtro.</p>`}
+function rbar(x,y,w,h,r){r=Math.min(r,h,w/2);return `M${x},${y+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h}Z`}
+function niceStep(v){const p=Math.pow(10,Math.floor(Math.log10(v||1)));const n=v/p;return (n<1.5?1:n<3?2:n<7?5:10)*p}
+/* ---------- render ---------- */
+function render(){
+  const L=H.filter(dentro),PA=P.filter(dentro);const tot=L.reduce((s,r)=>s+r.kg,0);
+  const dias=S.p===1?1:new Set(L.map(r=>r.d)).size||1;
+  const nM=MAQ.length||1;const metaP=META_DIA*(S.p===1?Math.max(0.02,Math.min(1,(HNOW-H_INI+MNOW/60)/(H_FIM-H_INI||16))):dias)*(S.m?1/nM:1)*(S.tu?0.5:1);
+  const metaTot=META_DIA*(S.p===1?1:dias)*(S.m?1/nM:1)*(S.tu?0.5:1);
+  const pct=metaTot?tot/metaTot*100:0,ritmo=metaP?tot/metaP*100:100;
+  const t1=L.filter(r=>r.tu==="1º").reduce((s,r)=>s+r.kg,0),t2=tot-t1;const par=PA.reduce((s,p)=>s+p.min,0);
+  const pend=L.filter(r=>r.st!=="Validado"&&r.st!=="Corrigido").length;const ab=Object.values(abertas).filter(o=>(!S.tu||o.tu===S.tu)&&(!S.m||o.m===S.m));
+  const badge=!META_DIA?"":ritmo>=98?`<span class="badge good">✓ no ritmo</span>`:ritmo>=85?`<span class="badge warn">▲ um pouco abaixo</span>`:`<span class="badge crit">▼ abaixo do ritmo</span>`;
+  const per=S.p===1?"hoje":S.p===7?"nos últimos 7 dias":"nos últimos 30 dias";
+  $("#kpis").innerHTML=`<div class="kpi hero"><div class="l">Produção ${per}${badge}</div><div class="v">${fmt(tot)} kg</div>
+     ${META_DIA?`<div class="bar" data-tip="<b>Meta ${per}</b><br>${fmt(metaTot)} kg<br>Atingido: ${pct.toFixed(0)}%"><i style="width:${Math.min(100,pct)}%"></i></div>
+     <div class="s">${pct.toFixed(0)}% da meta de ${fmt(metaTot)} kg${S.p===1?` · esperado até agora: ${fmt(metaP)} kg`:""}</div>`:`<div class="s">Defina META_DIA_KG na aba CONFIG para comparar com a meta.</div>`}</div>
+   <div class="kpi"><div class="l">1º turno</div><div class="v">${fmt(t1)}</div><div class="s">kg</div></div>
+   <div class="kpi"><div class="l">2º turno</div><div class="v">${fmt(t2)}</div><div class="s">kg</div></div>
+   <div class="kpi"><div class="l">Horas lançadas</div><div class="v">${L.length}</div><div class="s">${(tot/(L.length||1)).toFixed(0)} kg por hora</div></div>
+   <div class="kpi"><div class="l">Paradas</div><div class="v">${fmt(par)}</div><div class="s">minutos · ${PA.length} ocorrência(s)</div></div>
+   <div class="kpi"><div class="l">Aguardando PCP</div><div class="v">${pend}</div><div class="s">horas sem conferência</div></div>`;
+  // c1
+  const c1=$("#c1");
+  if(S.p===1){$("#t1").textContent="Produção hora a hora — hoje";$("#s1").textContent="kg por hora, por turno";
+    const hs=[];const hmin=Math.min(H_INI,...L.map(r=>r.h)),hmax=Math.max(H_FIM-1,...L.map(r=>r.h));for(let h=hmin;h<=hmax;h++)hs.push(h);
+    vbars(c1,hs.map(h=>({label:pad(h)+"h",tip:pad(h)+":00–"+pad(h+1)+":00",parts:[{v:L.filter(r=>r.h===h&&r.tu==="1º").reduce((s,r)=>s+r.kg,0),c:"var(--s1)",name:"1º turno"},{v:L.filter(r=>r.h===h&&r.tu==="2º").reduce((s,r)=>s+r.kg,0),c:"var(--s2)",name:"2º turno"}]})),
+      {ref:META_H*(S.m?1/nM:1),refLabel:"meta por hora",aria:"Produção hora a hora"})}
+  else{$("#t1").textContent="Produção por dia";$("#s1").textContent="kg por dia, por turno";
+    const ds=[...new Set(H.filter(r=>dentro(r)).map(r=>r.d))].sort();
+    vbars(c1,ds.map(d=>({label:d.slice(8)+"/"+d.slice(5,7),parts:[{v:L.filter(r=>r.d===d&&r.tu==="1º").reduce((s,r)=>s+r.kg,0),c:"var(--s1)",name:"1º turno"},{v:L.filter(r=>r.d===d&&r.tu==="2º").reduce((s,r)=>s+r.kg,0),c:"var(--s2)",name:"2º turno"}]})),
+      {ref:META_DIA*(S.m?1/nM:1)*(S.tu?0.5:1),refLabel:"meta do dia",aria:"Produção por dia"})}
+  $("#lg1").innerHTML=(S.tu!=="2º"?`<span><i class="sw" style="background:var(--s1)"></i>1º turno</span>`:"")+(S.tu!=="1º"?`<span><i class="sw" style="background:var(--s2)"></i>2º turno</span>`:"")+`${META_DIA?`<span><i class="sw line"></i>meta</span>`:""}`;
+  // c2
+  const pm={};L.forEach(r=>pm[r.m]=(pm[r.m]||0)+r.kg);
+  hbars($("#c2"),Object.entries(pm).sort((a,b)=>b[1]-a[1]).map(([m,v])=>({label:m,v,extra:MAT[m]})),"kg","var(--s1)");
+  // c3
+  $("#nab").textContent=`(${ab.length})`;
+  $("#c3").innerHTML=ab.length?`<div class="tw"><table><thead><tr><th>Ordem</th><th>Operador</th><th>Máquina</th><th class="num">Horas</th><th class="num">kg</th><th>Última hora</th></tr></thead><tbody>`+
+    ab.map(o=>{const ls=H.filter(r=>r.ord===o.ord&&r.d===o.d);const ult=ls.length?Math.max(...ls.map(r=>r.h)):null;return `<tr id="r-${o.ord}"><td><b>${o.ord}</b></td><td>${esc(o.op)}</td><td>${esc(o.m)}</td><td class="num">${ls.length}</td><td class="num">${fmt(ls.reduce((s,r)=>s+r.kg,0))}</td><td>${ult===null?"—":pad(ult)+":00–"+pad(ult+1)+":00"}</td></tr>`}).join("")+`</tbody></table></div>`:`<p class="muted">Nenhuma ordem aberta agora.</p>`;
+  // c4
+  const pp={};PA.forEach(p=>pp[p.mot]=(pp[p.mot]||0)+p.min);
+  hbars($("#c4"),Object.entries(pp).sort((a,b)=>b[1]-a[1]).map(([m,v])=>({label:m,v})),"min","var(--s2)");
+  // c5
+  const po={};L.forEach(r=>{const o=po[r.op]||(po[r.op]={op:r.op,tu:r.tu,kg:0,h:0});o.kg+=r.kg;o.h++});
+  const lo=Object.values(po).sort((a,b)=>b.kg-a.kg);
+  $("#c5").innerHTML=lo.length?`<div class="tw"><table><thead><tr><th>Operador</th><th>Turno</th><th class="num">kg</th><th class="num">Horas</th><th class="num">kg/h</th></tr></thead><tbody>`+lo.map(o=>`<tr><td>${esc(o.op)}</td><td>${o.tu}</td><td class="num"><b>${fmt(o.kg)}</b></td><td class="num">${o.h}</td><td class="num">${fmt(o.kg/o.h)}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="muted">Sem dados.</p>`;
+  // c6
+  const ac={};L.forEach(r=>ac[r.ac]=(ac[r.ac]||0)+r.q);const st={};L.forEach(r=>st[r.st]=(st[r.st]||0)+1);
+  $("#c6").innerHTML=`<table><tbody>${Object.entries(ac).sort((a,b)=>b[1]-a[1]).map(([a,v])=>`<tr><td>${a}</td><td class="num"><b>${fmt(v)}</b> un.</td></tr>`).join("")}</tbody></table>
+    <div style="margin-top:12px;font-size:13px"><b>Conferência do PCP</b></div>
+    <table><tbody>${["Validado","Corrigido","Em conferência"].map(k=>`<tr><td>${k=="Validado"?"✓ ":k=="Corrigido"?"✎ ":"… "}${k}</td><td class="num">${st[k]||0} h</td></tr>`).join("")}</tbody></table>`;
+  const d=new Date(ultimoOk||Date.now());$("#upd").textContent=`Ao vivo · atualizado às ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+/* ---------- "ao vivo": busca a planilha a cada 60 s ---------- */
+async function atualizar(){const antes=new Set(H.map(r=>r.ord+"|"+r.d+"|"+r.h));if(await carregar()){render();
+  const novas=new Set(H.filter(r=>!antes.has(r.ord+"|"+r.d+"|"+r.h)).map(r=>r.ord));if(antes.size)novas.forEach(o=>{const tr=document.getElementById("r-"+o);if(tr)tr.classList.add("flash")})}else render()}
+/* ---------- eventos ---------- */
+$("#per").onclick=e=>{const b=e.target.closest("button");if(!b)return;S.p=+b.dataset.p;[...$("#per").children].forEach(x=>x.classList.toggle("on",x===b));render()};
+$("#fTurno").onchange=e=>{S.tu=e.target.value;render()};$("#fMaq").onchange=e=>{S.m=e.target.value;render()};
+const tip=$("#tip");document.addEventListener("mousemove",e=>{const t=e.target.closest("[data-tip]");if(!t){tip.style.opacity=0;return}tip.innerHTML=t.dataset.tip;tip.style.opacity=1;
+  const x=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8),y=Math.min(e.clientY+14,innerHeight-tip.offsetHeight-8);tip.style.left=x+"px";tip.style.top=y+"px"});
+async function entrar(auto){if(!auto)SENHA=$("#senha").value.trim();if(!SENHA)return;$("#gmsg").textContent="Conectando…";
+  try{await carregar();try{sessionStorage.setItem(KS,SENHA);if($("#lembrar")&&$("#lembrar").checked)localStorage.setItem(KS,SENHA)}catch(e){}
+    $("#gate").remove();render();setInterval(()=>{if(!document.hidden)atualizar()},60000);document.addEventListener("visibilitychange",()=>{if(!document.hidden&&Date.now()-ultimoOk>30000)atualizar()})}
+  catch(e){if(!$("#gate")){console.error(e);return}SENHA="";try{sessionStorage.removeItem(KS);localStorage.removeItem(KS)}catch(_){ }$("#senha").value="";$("#gmsg").textContent=/negado/i.test(e.message)?"Senha incorreta.":"Erro: "+e.message}}
+if(!API)$("#gmsg").textContent="Falta configurar o endereço do servidor (arquivo config.js).";
+$("#entrar").onclick=()=>entrar();$("#senha").onkeydown=e=>{if(e.key==="Enter")entrar()};
+$("#gmsg").insertAdjacentHTML("beforebegin",`<label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:10px;color:var(--tx2)"><input type="checkbox" id="lembrar"> Lembrar neste aparelho</label>`);
+if(SENHA)entrar(true);
+addEventListener("resize",()=>{if(!$("#gate"))render()});
+</script>
+</body>
+</html>

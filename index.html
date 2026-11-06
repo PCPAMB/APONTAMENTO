@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Apontamento</title>
+<title>ERP Produção – Operador</title>
 <style>
 :root{--lime:#CDFF00;--limeD:#708C00;--limeL:#F3FFCC;--dark:#1C1E1A;--bg:#F5F6F2;--bd:#D6DAD0;--tx:#1C1E1A;--tx2:#686E64;--okL:#D6F0E0;--warn:#E6A800;--warnL:#FFF3CD;--err:#DC3545;--errL:#FFE4E6}
 *{box-sizing:border-box}
@@ -59,6 +59,7 @@ td,th{padding:9px 8px;border-bottom:1px solid var(--bd);text-align:left}th{font-
 <body>
 <div class="app" id="app"></div>
 <div class="toast" id="toast"></div>
+<script src="config.js" onerror="void 0"></script>
 <script>
 "use strict";
 /* ======================================================================
@@ -69,14 +70,15 @@ td,th{padding:9px 8px;border-bottom:1px solid var(--bd);text-align:left}th{font-
    ====================================================================== */
 const CAD0 = {"maq": [], "mat": [], "mot": []};
 const ACOND0 = ["BAG","FARDO","PALETE","SACARIA"];
-const KEY = "erp-producao-operador-v1";
+const KEY = "erp-producao-operador-google-v1";
+const API_PADRAO = (window.ERP_API||"");
 const VERSAO = "1.0";
 
 /* ---------------- armazenamento ---------------- */
-function novo(){return {cfg:{dev:"01",adminPin:"",pastaNome:""},users:[],cad:{maq:CAD0.maq.slice(),mat:CAD0.mat.slice(),mot:CAD0.mot.map(m=>m.slice()),acond:ACOND0.slice()},
-  seqO:0,seqL:0,seqP:0,ordens:[],lanc:[],paradas:[],exports:[]}}
+function novo(){return {cfg:{dev:"01",adminPin:"",pastaNome:"",api:API_PADRAO,chave:""},users:[],cad:{maq:[],mat:[],mot:[],acond:ACOND0.slice()},cadEm:"",
+  seqO:0,seqL:0,seqP:0,ordens:[],lanc:[],paradas:[],exports:[],fila:[],ultimoEnvio:"",erroEnvio:""}}
 let S=carregar();
-function carregar(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.cfg&&v.lanc)return v}catch(e){}return novo()}
+function carregar(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.cfg&&v.lanc){v.fila=v.fila||[];if(!v.cfg.api)v.cfg.api=API_PADRAO;return v}}catch(e){}return novo()}
 let storageOk=true;
 function salvar(){try{localStorage.setItem(KEY,JSON.stringify(S));storageOk=true}catch(e){storageOk=false;toast("⚠ Não foi possível salvar neste navegador. Exporte agora.")}}
 
@@ -106,6 +108,37 @@ function hourOpts(sel){return Array.from({length:24},(_,i)=>`<option value="${i}
 function minOpts(sel){return Array.from({length:12},(_,i)=>i*5).map(m=>`<option value="${m}"${m==sel?" selected":""}>${pad(m)}</option>`).join("")}
 function oprNum(n){return "OPR-"+S.cfg.dev+"-"+pad(n,6)}
 
+/* ---------------- servidor Google ---------------- */
+const online=()=>!!(S.cfg.api&&S.cfg.chave);
+async function api(body,ms=20000){const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),ms);
+  try{const r=await fetch(S.cfg.api,{method:"POST",body:JSON.stringify(Object.assign({k:S.cfg.chave},body)),signal:ctl.signal,redirect:"follow"});
+    const j=await r.json();if(!j.ok)throw new Error(j.erro||"Erro no servidor");return j}
+  catch(e){if(e.name==="AbortError")throw new Error("Sem resposta do servidor (internet?)");throw e}finally{clearTimeout(t)}}
+async function sha(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+async function baixarCadastros(avisar){if(!online())return false;
+  try{const j=await api({a:"cad"});S.users=j.users.map(u=>Object.assign({ativo:true},u));S.cad={maq:j.maq,mat:j.mat,mot:j.mot,acond:j.acond.length?j.acond:ACOND0.slice()};S.cadEm=nowIso();salvar();
+    if(avisar)toast(`Conectado. ${j.users.length} operador(es), ${j.maq.length} máquinas, ${j.mat.length} materiais.`);return true}
+  catch(e){if(avisar)toast("Falha: "+e.message);return false}}
+let enviando=false;
+function pendentesEnvio(){return S.lanc.filter(l=>!l.sync).length+S.paradas.filter(p=>!p.sync).length+S.fila.length}
+async function enviar(manual){if(!online()||enviando)return;const tot=pendentesEnvio();if(!tot){if(manual)toast("Tudo já foi enviado ✓");return}
+  enviando=true;const Lp=S.lanc.filter(l=>!l.sync),Pp=S.paradas.filter(p=>!p.sync);const L=Lp.slice(0,150),P=Pp.slice(0,150);
+  const enc=Lp.length>150?[]:S.fila.filter(f=>f.t==="enc"),ped=S.fila.filter(f=>f.t==="ped");
+  try{const j=await api({a:"sync",lanc:L.map(l=>Object.assign({},l,{dev:S.cfg.dev})),par:P.map(p=>Object.assign({},p,{dev:S.cfg.dev,tipo:(S.cad.mot.find(m=>m[0]===p.mot)||[])[1]||""})),enc:enc,ped:ped},30000);
+    const a=j.ack;const sl=new Set(a.lanc),sp=new Set(a.par),se=new Set(a.enc),sq=new Set(a.ped);
+    S.lanc.forEach(l=>{if(sl.has(l.id))l.sync=true});S.paradas.forEach(p=>{if(sp.has(p.id))p.sync=true});
+    S.fila=S.fila.filter(f=>!(f.t==="enc"&&se.has(f.ordem))&&!(f.t==="ped"&&sq.has(f.id)));
+    S.ultimoEnvio=nowIso();S.erroEnvio="";salvar();if(manual)toast("Enviado ✓");}
+  catch(e){S.erroEnvio=e.message;salvar();if(manual)toast("Não enviou: "+e.message)}
+  finally{enviando=false;if(["login","ordem","meus","admin"].includes(UI.tela))suave()}}
+setInterval(()=>enviar(false),30000);window.addEventListener("online",()=>enviar(false));
+async function sincronizarOrdem(u){/* a ordem aberta pode ter sido começada em outro aparelho */
+  if(!online())return;try{const j=await api({a:"ordemAberta",uid:u.id},8000);
+    if(j.ordem){let o=S.ordens.find(x=>x.num===j.ordem.num);if(!o){o=Object.assign({},j.ordem,{total:0,horas:0});S.ordens.push(o)}o.status="Aberta";
+      j.linhas.forEach(l=>{if(!S.lanc.some(x=>x.id===l.id))S.lanc.push(l)});}
+    else{S.ordens.filter(o=>o.uid===u.id&&o.status==="Aberta"&&!S.fila.some(f=>f.t==="enc"&&f.ordem===o.num)).forEach(o=>o.status="Encerrada")}
+    salvar()}catch(e){}}
+
 /* ---------------- estado da tela ---------------- */
 let UI={tela:"login",u:null,sel:null,pin:"",busca:"",form:{},h:{},par:{},meusSel:null,pedido:"",buscaMeus:"",confEnc:false,ultima:null,admOk:false,admPin:"",admTab:"op"};
 function user(){return S.users.find(x=>x.id===UI.u)}
@@ -131,14 +164,12 @@ function tela(){
     const q=UI.busca.trim().toLowerCase();const us=S.users.filter(x=>x.ativo&&(!q||x.nome.toLowerCase().includes(q))).sort((a,b)=>a.nome.localeCompare(b.nome));
     const sel=S.users.find(x=>x.id===UI.sel);const pend=pendentes();const abertas=S.ordens.filter(o=>o.status==="Aberta");
     return hd("Quem está lançando?")+`<div class="body">
-    ${S.users.length&&!S.cad.maq.length?`<div class="warn">Cadastros não carregados. Procure o responsável.</div>`:""}
-    ${!S.users.length?`<div class="warn">Aparelho ainda não configurado. Procure o responsável.</div>`:""}
+    ${!online()||!S.users.length?`<div class="warn">Aparelho ainda não configurado. Procure o responsável.</div>`:""}
     <input class="in" id="busca" value="${esc(UI.busca)}" placeholder="Buscar meu nome" style="margin-bottom:10px">
     ${us.map(x=>`<div class="card${x.id===UI.sel?" sel":""}" data-sel="${x.id}"><div class="l1"><span><b style="font-size:17px">${esc(x.nome)}</b><br><span class="muted">Turno ${esc(x.turno)}</span></span>${ordemAberta(x.id)?`<span class="chip on">Ordem aberta</span>`:""}</div></div>`).join("")}
     <div class="lbl">${sel?"PIN de "+esc(sel.nome):"Toque no seu nome"}</div>
     <input class="in pin" id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" value="${esc(UI.pin)}" placeholder="PIN (4 dígitos)">
-    <div class="box" style="margin-top:16px"><b>Fim do turno</b><div class="muted" style="margin:4px 0 8px">${pend.l} hora(s) e ${pend.p} parada(s) ainda não exportadas${abertas.length?` · ${abertas.length} ordem(ns) aberta(s)`:""}.</div>
-      <button class="btn sec" data-act="exportar">Exportar turno</button></div>
+    ${online()?`<div class="box" style="margin-top:16px">${pendentesEnvio()?`<b>⏳ ${pendentesEnvio()} item(ns) aguardando internet</b><div class="muted" style="margin:4px 0 8px">Ficam guardados neste aparelho e são enviados sozinhos quando a internet voltar.${S.erroEnvio?" ("+esc(S.erroEnvio)+")":""}</div><button class="btn sec" data-act="enviarAgora">Enviar agora</button>`:`<b>✓ Tudo enviado</b><div class="muted">${S.ultimoEnvio?"Último envio: "+br(S.ultimoEnvio):"Lançamentos vão direto para o servidor."}${abertas.length?` · ${abertas.length} ordem(ns) aberta(s) neste aparelho`:""}</div>`}</div>`:""}
     <div style="text-align:center;margin-top:10px"><button class="linkbtn" data-go="admin">${S.cfg.adminPin?"Administração":"Configurar este aparelho"}</button></div></div>
     <div class="foot"><button class="btn" data-act="entrar"${sel&&UI.pin.length===4?"":" disabled"}>Entrar</button></div>`}
   case "inicio":{
@@ -158,7 +189,7 @@ function tela(){
     <div class="lbl">Máquina *</div><select class="sel" data-f="maq">${opts(S.cad.maq,f.maq,"Selecione…")}</select>
     <div class="lbl">Material *</div><select class="sel" data-f="mat">${opts(S.cad.mat,f.mat,"Selecione…")}</select>
     <div class="info" style="margin-top:16px">Uma ordem por máquina e turno. O número é gerado agora e vale para todas as horas que você lançar até encerrar a ordem no fim do turno.</div></div>
-    <div class="foot"><button class="btn" data-act="abrirOrdem"${ok?"":" disabled"}>Abrir ordem</button></div>`}
+    <div class="foot"><button class="btn" data-act="abrirOrdem"${ok&&!UI.abrindo?"":" disabled"}>${UI.abrindo?"Abrindo ordem…":"Abrir ordem"}</button></div>`}
   case "ordem":{
     const o=ordemAberta();if(!o){UI.tela="inicio";return tela()}
     const L=linhasDe(o);const h=UI.h;
@@ -177,7 +208,7 @@ function tela(){
     ${dup?`<div class="warn">⚠ Esta hora já foi lançada nesta ordem.</div>`:""}
     <button class="btn" style="margin-top:12px" data-act="lancar"${h.acond&&num(h.peso)>0?"":" disabled"}>Lançar esta hora (${sp.dur} min)</button>
     <div class="lbl" style="margin-top:14px">Horas lançadas nesta ordem</div>
-    <div class="tw"><table><tbody>${L.length?L.map(l=>`<tr><td><b>${hh(l.ini)}–${hh(l.fim)}</b></td><td class="num">${kg(l.peso)} kg</td><td>${esc(l.qtd)} ${esc(l.acond)}</td><td>${l.exp?`<span class="chip ok">exportado</span>`:`<span class="chip">no aparelho</span>`}</td></tr>`).join(""):`<tr><td class="empty">Nenhuma hora lançada ainda.</td></tr>`}</tbody></table></div></div>
+    <div class="tw"><table><tbody>${L.length?L.map(l=>`<tr><td><b>${hh(l.ini)}–${hh(l.fim)}</b></td><td class="num">${kg(l.peso)} kg</td><td>${esc(l.qtd)} ${esc(l.acond)}</td><td>${l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</td></tr>`).join(""):`<tr><td class="empty">Nenhuma hora lançada ainda.</td></tr>`}</tbody></table></div></div>
     <div class="foot"><button class="btn sec${UI.confEnc?" warnb":""}" data-act="encerrar">${UI.confEnc?"Toque de novo para confirmar":"Encerrar ordem (fim do turno)"}</button></div>`}
   case "encerrada":{
     const o=S.ordens.find(x=>x.num===UI.ultima);if(!o){UI.tela="inicio";return tela()}
@@ -205,7 +236,7 @@ function tela(){
     const sel=S.lanc.find(l=>l.id===UI.meusSel);
     return hd("Meus lançamentos","inicio")+`<div class="body">
     <input class="in" id="buscaMeus" value="${esc(UI.buscaMeus)}" placeholder="Buscar nº da ordem (ex.: 000123)" style="margin-bottom:10px">
-    ${L.length?L.map(l=>`<div class="card${l.id===UI.meusSel?" sel":""}" data-meus="${l.id}"><div class="l1"><b>${l.ordem} <span style="font-weight:400;font-size:14px">${hh(l.ini)}–${hh(l.fim)}</span></b>${l.pedido?`<span class="chip cs">Correção pedida</span>`:l.exp?`<span class="chip ok">exportado</span>`:`<span class="chip">no aparelho</span>`}</div>
+    ${L.length?L.map(l=>`<div class="card${l.id===UI.meusSel?" sel":""}" data-meus="${l.id}"><div class="l1"><b>${l.ordem} <span style="font-weight:400;font-size:14px">${hh(l.ini)}–${hh(l.fim)}</span></b>${l.pedido?`<span class="chip cs">Correção pedida</span>`:l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</div>
       <div style="font-size:14px;margin-top:3px">${esc(l.maq)} · ${esc(l.mat)}</div><div class="muted">${kg(l.peso)} kg · ${esc(l.qtd)} ${esc(l.acond)} · ${brc(l.ini)}</div></div>`).join(""):`<div class="empty">Nenhum lançamento nos últimos 30 dias.</div>`}
     <div class="lbl" style="margin-top:12px">${sel?"Pedir correção da hora "+hh(sel.ini)+"–"+hh(sel.fim)+" da ordem "+sel.ordem:"Selecione um lançamento acima para pedir correção"}</div>
     <textarea class="in" id="pedido" placeholder="Descreva o que precisa ser corrigido (ex.: o peso certo é 115 kg)">${esc(UI.pedido)}</textarea></div>
@@ -223,31 +254,28 @@ function telaAdmin(){
   if(!UI.admOk)return hd("Administração","login")+`<div class="body"><div class="lbl">PIN do administrador</div>
     <input class="in pin" id="admPin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" value="${esc(UI.admPin)}" placeholder="PIN do administrador">
 </div><div class="foot"><button class="btn" data-act="admEntrar">Entrar</button></div>`;
-  const t=UI.admTab;const tabs=[["op","Operadores"],["cad","Cadastros"],["cfg","Aparelho"],["dados","Dados"]];
+  const t=UI.admTab;const tabs=[["cfg","Aparelho"],["op","Operadores"],["cad","Cadastros"],["dados","Dados"]];
   let c="";
-  if(t=="op")c=`<h3>Operadores</h3><p class="muted">Nome, turno padrão e PIN de 4 dígitos (diferente para cada pessoa). Desative em vez de apagar.</p>
-    <div class="tw"><table><thead><tr><th>Nome</th><th>Turno</th><th>PIN</th><th>Ativo</th></tr></thead><tbody>
-    ${S.users.map(x=>`<tr><td><input data-u="${x.id}" data-k="nome" value="${esc(x.nome)}"></td><td><select data-u="${x.id}" data-k="turno">${opts(["1º","2º"],x.turno)}</select></td>
-      <td><input data-u="${x.id}" data-k="pin" value="${esc(x.pin)}" maxlength="4" inputmode="numeric" style="width:70px"></td><td><input type="checkbox" data-u="${x.id}" data-k="ativo"${x.ativo?" checked":""} style="width:22px;height:22px"></td></tr>`).join("")}
-    </tbody></table></div><button class="btn sec" style="margin-top:10px" data-act="addUser">+ Adicionar operador</button>`;
-  if(t=="cad")c=`<h3>Carregar de arquivo</h3><p class="muted">Escolha o arquivo <b>cadastros_erp.json</b> (fica no seu OneDrive, não no site). Substitui máquinas, materiais, motivos e acondicionamento.</p>
-    <input type="file" id="cadArq" accept=".json" class="in" style="padding-top:10px">
-    <h3>Máquinas</h3><p class="muted">Uma por linha.</p><textarea class="in" rows="7" data-cad="maq">${esc(S.cad.maq.join("\n"))}</textarea>
-    <h3>Materiais</h3><textarea class="in" rows="7" data-cad="mat">${esc(S.cad.mat.join("\n"))}</textarea>
-    <h3>Motivos de parada</h3><p class="muted">Formato: MOTIVO ; TIPO</p><textarea class="in" rows="9" data-cad="mot">${esc(S.cad.mot.map(m=>m[0]+" ; "+m[1]).join("\n"))}</textarea>
-    <h3>Acondicionamento</h3><textarea class="in" rows="4" data-cad="acond">${esc(S.cad.acond.join("\n"))}</textarea>
-    <button class="btn" style="margin-top:12px" data-act="salvarCad">Salvar cadastros</button>`;
-  if(t=="cfg")c=`<h3>Código do aparelho</h3><p class="muted">Entra no número da ordem (OPR-<b>${esc(S.cfg.dev)}</b>-000001). Use um código diferente em cada aparelho.</p>
+  if(t=="op")c=`<h3>Operadores</h3><p class="muted">Vêm da aba <b>CAD_Usuarios</b> da planilha (nome, turno, PIN, ativo). Para incluir alguém, edite a planilha e toque em Atualizar.</p>
+    <div class="tw"><table><thead><tr><th>Nome</th><th>Turno</th></tr></thead><tbody>${S.users.map(x=>`<tr><td>${esc(x.nome)}</td><td>${esc(x.turno)}</td></tr>`).join("")||`<tr><td class="empty">Nenhum. Conecte o aparelho na aba Aparelho.</td></tr>`}</tbody></table></div>
+    <button class="btn sec" style="margin-top:10px" data-act="atualizarCad">Atualizar da planilha</button>`;
+  if(t=="cad")c=`<h3>Cadastros</h3><p class="muted">Vêm das abas CAD_Maquinas, CAD_Materiais, CAD_Motivos e CAD_Acond da planilha.${S.cadEm?" Atualizado em "+br(S.cadEm)+".":""}</p>
+    <div class="box">${S.cad.maq.length} máquinas · ${S.cad.mat.length} materiais · ${S.cad.mot.length} motivos de parada · ${S.cad.acond.length} tipos de acondicionamento</div>
+    <button class="btn sec" style="margin-top:10px" data-act="atualizarCad">Atualizar da planilha</button>`;
+  if(t=="cfg")c=`<h3>Servidor</h3><p class="muted">Endereço do servidor Google (termina em /exec) e a chave dos aparelhos (aba CONFIG da planilha).</p>
+    <div class="lbl">Endereço do servidor</div><input class="in" data-cfg="api" value="${esc(S.cfg.api)}" placeholder="https://script.google.com/macros/s/…/exec" style="font-size:14px">
+    <div class="lbl">Chave dos aparelhos</div><input class="in" data-cfg="chave" value="${esc(S.cfg.chave)}" autocomplete="off" style="font-size:14px">
+    <h3>Código do aparelho</h3><p class="muted">Identifica este aparelho nos lançamentos (01, 02…). Use um código diferente em cada um.</p>
     <input class="in" data-cfg="dev" value="${esc(S.cfg.dev)}" maxlength="3" style="max-width:120px">
-    <h3>Pasta de exportação</h3><p class="muted">Escolha a pasta PRODUÇÃO (ou uma subpasta EXPORTACOES) sincronizada pelo OneDrive. Atual: <b>${esc(S.cfg.pastaNome||"nenhuma (os arquivos vão para Downloads)")}</b></p>
-    <button class="btn sec" data-act="escolherPasta">Escolher pasta</button>
     <h3>PIN do administrador</h3><input class="in" data-cfg="adminPin" value="${esc(S.cfg.adminPin)}" maxlength="8" inputmode="numeric" style="max-width:160px">
-    <button class="btn" style="margin-top:14px" data-act="salvarCfg">Salvar</button>`;
-  if(t=="dados"){const pend=pendentes();c=`<h3>Situação</h3><div class="box">${S.ordens.length} ordem(ns) · ${S.lanc.length} hora(s) · ${S.paradas.length} parada(s) neste aparelho.<br>Não exportados: ${pend.l} hora(s) e ${pend.p} parada(s).</div>
+    <button class="btn" style="margin-top:14px" data-act="salvarCfg">Salvar e conectar</button>`;
+  if(t=="dados"){const pend=pendentes();c=`<h3>Situação</h3><div class="box">${S.ordens.length} ordem(ns) · ${S.lanc.length} hora(s) · ${S.paradas.length} parada(s) guardadas neste aparelho.</div>
     <h3>Exportações feitas</h3><div class="tw"><table><tbody>${S.exports.slice(-15).reverse().map(e=>`<tr><td>${br(e.quando)}</td><td>${esc(e.arquivo)}</td><td class="num">${e.linhas}</td></tr>`).join("")||`<tr><td class="empty">Nenhuma ainda.</td></tr>`}</tbody></table></div>
-    <h3>Reexportar tudo</h3><p class="muted">Gera de novo os arquivos com todos os lançamentos guardados (útil se um arquivo se perdeu). O PCP ignora o que já tinha importado.</p>
-    <button class="btn sec" data-act="exportarTudo">Reexportar tudo</button>
-    <h3>Backup e limpeza</h3><p class="muted">Lançamentos exportados há mais de 60 dias são apagados deste aparelho automaticamente.</p>
+    <h3>Envio para o servidor</h3><div class="box">${pendentesEnvio()?`⏳ ${pendentesEnvio()} item(ns) aguardando envio.`:"✓ Tudo enviado."}${S.ultimoEnvio?" Último envio: "+br(S.ultimoEnvio)+".":""}${S.erroEnvio?"<br>Último erro: "+esc(S.erroEnvio):""}</div>
+    <button class="btn sec" style="margin-top:8px" data-act="enviarAgora">Enviar agora</button>
+    <h3>Cópia de segurança em CSV</h3><p class="muted">Opcional: gera arquivos com todos os lançamentos guardados neste aparelho.</p>
+    <button class="btn sec" data-act="exportarTudo">Baixar CSV de tudo</button>
+    <h3>Backup e limpeza</h3><p class="muted">Lançamentos já enviados há mais de 60 dias são apagados deste aparelho automaticamente.</p>
     <button class="btn sec" data-act="backup">Baixar backup completo (JSON)</button>
     <div class="lbl">Restaurar backup</div><input type="file" id="restaurar" accept=".json" class="in" style="padding-top:10px">`}
   return hd("Administração","login")+`<div class="body adm"><div style="display:flex;gap:6px;flex-wrap:wrap">${tabs.map(([k,n])=>`<button class="btn sm${t==k?"":" sec"}" data-admtab="${k}">${n}</button>`).join("")}</div>${c}</div>`;
@@ -276,43 +304,52 @@ async function exportar(tudo){
   let onde="";
   if(L.length)onde=await gravar("LANCAMENTOS_"+base+".csv",csv(L.map(linhaL),COLS_L));
   if(P.length)onde=await gravar("PARADAS_"+base+".csv",csv(P.map(linhaP),COLS_P));
-  L.forEach(l=>l.exp=true);P.forEach(p=>p.exp=true);
   S.exports.push({quando:nowIso(),arquivo:base,linhas:L.length+P.length});limpar();salvar();
   toast(`Exportado: ${L.length} hora(s) e ${P.length} parada(s) → ${onde=="pasta"?"pasta "+(S.cfg.pastaNome||""):"Downloads"}`);render();
 }
-function limpar(){const lim=addDays(today(),-60);S.lanc=S.lanc.filter(l=>!(l.exp&&l.data<lim));S.paradas=S.paradas.filter(p=>!(p.exp&&p.data<lim));
+function limpar(){const lim=addDays(today(),-60);S.lanc=S.lanc.filter(l=>!(l.sync&&l.data<lim));S.paradas=S.paradas.filter(p=>!(p.sync&&p.data<lim));
   S.ordens=S.ordens.filter(o=>o.status==="Aberta"||o.data>=lim)}
 
 /* ---------------- ações ---------------- */
 const ACT={
-  entrar(){const x=S.users.find(y=>y.id===UI.sel);if(!x||x.pin!==UI.pin){toast("PIN incorreto.");UI.pin="";return}
-    UI.u=x.id;UI.sel=null;UI.pin="";UI.busca="";UI.form={};UI.h={};UI.meusSel=null;UI.pedido="";UI.tela=ordemAberta()?"ordem":"inicio";toast("Olá, "+x.nome.split(" ")[0]+"!")},
+  async entrar(){const x=S.users.find(y=>y.id===UI.sel);if(!x){return}
+    let ok=false;try{ok=(await sha(x.id+":"+UI.pin))===x.ph}catch(e){toast("Este navegador não suporta o login seguro. Use https.");return}
+    if(!ok){toast("PIN incorreto.");UI.pin="";return}
+    UI.u=x.id;UI.sel=null;UI.pin="";UI.busca="";UI.form={};UI.h={};UI.meusSel=null;UI.pedido="";
+    await sincronizarOrdem(x);UI.tela=ordemAberta()?"ordem":"inicio";toast("Olá, "+x.nome.split(" ")[0]+"!");enviar(false)},
   sair(){UI.u=null;UI.tela="login";UI.confEnc=false;UI.h={};UI.form={};UI.par={};toast("Aparelho liberado para o próximo colaborador.")},
-  abrirOrdem(){const u=user(),f=UI.form;S.seqO++;const o={n:S.seqO,num:oprNum(S.seqO),uid:u.id,nome:u.nome,data:f.data,turno:f.turno,maq:f.maq,mat:f.mat,status:"Aberta",abertura:nowIso(),encerramento:"",total:0,horas:0};
-    S.ordens.push(o);salvar();UI.form={};UI.h={};UI.tela="ordem";toast("Ordem "+o.num+" aberta.")},
+  async abrirOrdem(){const u=user(),f=UI.form;if(UI.abrindo)return;UI.abrindo=true;suave();
+    try{const j=await api({a:"abrir",ordem:{tmp:Date.now(),uid:u.id,nome:u.nome,data:f.data,turno:f.turno,maq:f.maq,mat:f.mat,dev:S.cfg.dev}},20000);
+      S.seqO++;const o=Object.assign({n:S.seqO,total:0,horas:0,encerramento:""},j.ordem);if(!S.ordens.some(x=>x.num===o.num))S.ordens.push(o);
+      salvar();UI.form={};UI.h={};UI.tela="ordem";toast("Ordem "+o.num+" aberta.")}
+    catch(e){toast("Não foi possível abrir a ordem: "+e.message+". Verifique o wifi e tente de novo.")}
+    finally{UI.abrindo=false}},
   lancar(){const u=user(),o=ordemAberta(),h=UI.h,sp=horaOrdem(o,h);S.seqL++;
-    S.lanc.push({id:S.cfg.dev+"-L"+pad(S.seqL,6),ordem:o.num,uid:u.id,nome:u.nome,data:o.data,turno:o.turno,maq:o.maq,mat:o.mat,ini:sp.ini,fim:sp.fim,dur:sp.dur,peso:num(h.peso),qtd:h.qtd?parseInt(h.qtd,10):"",acond:h.acond,obs:h.obs,criado:nowIso(),exp:false,pedido:""});
-    salvar();toast("Hora "+hh(sp.ini)+"–"+hh(sp.fim)+" lançada: "+h.peso+" kg");UI.h={acond:h.acond};UI.confEnc=false},
+    S.lanc.push({id:S.cfg.dev+"-L"+pad(S.seqL,6)+"-"+Date.now().toString(36),ordem:o.num,uid:u.id,nome:u.nome,data:o.data,turno:o.turno,maq:o.maq,mat:o.mat,ini:sp.ini,fim:sp.fim,dur:sp.dur,peso:num(h.peso),qtd:h.qtd?parseInt(h.qtd,10):"",acond:h.acond,obs:h.obs,criado:nowIso(),sync:false,pedido:""});
+    salvar();enviar(false);toast("Hora "+hh(sp.ini)+"–"+hh(sp.fim)+" lançada: "+h.peso+" kg");UI.h={acond:h.acond};UI.confEnc=false},
   encerrar(){if(!UI.confEnc){UI.confEnc=true;return}const o=ordemAberta();const L=linhasDe(o);o.status="Encerrada";o.encerramento=nowIso();o.total=L.reduce((s,l)=>s+l.peso,0);o.horas=L.length;
-    L.forEach(l=>l.exp=false);/* reexporta com StatusOrdem = Encerrada */
-    salvar();UI.confEnc=false;UI.ultima=o.num;UI.tela="encerrada"},
+    S.fila.push({t:"enc",ordem:o.num,quando:o.encerramento});
+    salvar();enviar(false);UI.confEnc=false;UI.ultima=o.num;UI.tela="encerrada"},
   salvarParada(){const u=user(),p=UI.par,sp=span(p.data,p.hi,p.mi,p.hf,p.mf),oa=ordemAberta();S.seqP++;
-    S.paradas.push({id:S.cfg.dev+"-P"+pad(S.seqP,6),ordem:oa?oa.num:"",uid:u.id,nome:u.nome,maq:p.maq,mot:p.mot,data:p.data,ini:sp.ini,fim:sp.fim,dur:sp.dur,obs:p.obs,criado:nowIso(),exp:false});
-    salvar();UI.par={};UI.tela="inicio";toast("Parada registrada.")},
-  pedir(){const l=S.lanc.find(x=>x.id===UI.meusSel);l.pedido=UI.pedido.trim();l.exp=false;salvar();UI.pedido="";toast("Pedido registrado. Vai para o PCP na próxima exportação.")},
+    S.paradas.push({id:S.cfg.dev+"-P"+pad(S.seqP,6)+"-"+Date.now().toString(36),ordem:oa?oa.num:"",uid:u.id,nome:u.nome,maq:p.maq,mot:p.mot,data:p.data,ini:sp.ini,fim:sp.fim,dur:sp.dur,obs:p.obs,criado:nowIso(),sync:false});
+    salvar();enviar(false);UI.par={};UI.tela="inicio";toast("Parada registrada.")},
+  pedir(){const l=S.lanc.find(x=>x.id===UI.meusSel);l.pedido=UI.pedido.trim();S.fila.push({t:"ped",id:l.id,texto:l.pedido});salvar();enviar(false);UI.pedido="";toast("Pedido enviado ao PCP.")},
+  enviarAgora(){return enviar(true)},
+  atualizarCad(){return baixarCadastros(true)},
   exportar(){exportar(false)},
   exportarTudo(){exportar(true)},
   admEntrar(){if(UI.admPin===S.cfg.adminPin){UI.admOk=true;UI.admPin="";if(S.cfg.adminPin==="0000"){UI.admTab="cfg";toast("Troque o PIN do administrador (0000).")}}else{toast("PIN incorreto.");UI.admPin=""}},
   admCriar(){const a=($("#admNovo1")||{}).value||"",b=($("#admNovo2")||{}).value||"";
     if(!/^\d{4,8}$/.test(a)){toast("O PIN deve ter de 4 a 8 números.");return}if(a!==b){toast("Os dois PINs não são iguais.");return}
     if(a==="0000"||a==="1234"){toast("Escolha um PIN menos óbvio.");return}
-    S.cfg.adminPin=a;salvar();UI.admOk=true;UI.admTab="cad";toast("PIN criado. Agora carregue os cadastros e cadastre os operadores.")},
+    S.cfg.adminPin=a;salvar();UI.admOk=true;UI.admTab="cfg";toast("PIN criado. Agora informe o servidor e a chave.")},
   addUser(){S.users.push({id:"u"+Date.now(),nome:"Novo operador",turno:"1º",pin:"",ativo:true});salvar()},
   salvarCad(){const g=k=>document.querySelector(`[data-cad="${k}"]`).value.split("\n").map(s=>s.trim()).filter(Boolean);
     S.cad.maq=g("maq");S.cad.mat=g("mat");S.cad.acond=g("acond");S.cad.mot=g("mot").map(s=>{const[a,b]=s.split(";");return[a.trim(),(b||"").trim()]});salvar();toast("Cadastros salvos.")},
-  salvarCfg(){const dev=document.querySelector('[data-cfg="dev"]').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"");const pin=document.querySelector('[data-cfg="adminPin"]').value.trim();
+  async salvarCfg(){const g=k=>document.querySelector(`[data-cfg="${k}"]`).value.trim();const dev=g("dev").toUpperCase().replace(/[^A-Z0-9]/g,""),pin=g("adminPin");
     if(!dev){toast("Informe o código do aparelho.");return}if(pin.length<4){toast("PIN do administrador com pelo menos 4 dígitos.");return}
-    S.cfg.dev=dev;S.cfg.adminPin=pin;salvar();toast("Configuração salva.")},
+    if(!/^https:\/\/script\.google\.com\//.test(g("api"))&&!/^http:\/\/localhost/.test(g("api"))){toast("Endereço do servidor inválido (deve começar com https://script.google.com/).");return}
+    S.cfg.dev=dev;S.cfg.adminPin=pin;S.cfg.api=g("api");S.cfg.chave=g("chave");salvar();await baixarCadastros(true)},
   async escolherPasta(){if(!window.showDirectoryPicker){toast("Este navegador não permite escolher pasta. Use Edge ou Chrome no computador; os arquivos irão para Downloads.");return}
     try{const h=await window.showDirectoryPicker({mode:"readwrite",id:"erp-export"});await hSet("pasta",h);S.cfg.pastaNome=h.name;salvar();toast("Pasta escolhida: "+h.name);render()}catch(e){}},
   backup(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:"application/json"}));a.download="BACKUP_OPERADOR_AP"+S.cfg.dev+"_"+today()+".json";document.body.appendChild(a);a.click();a.remove()},
@@ -357,6 +394,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="pin"
 window.addEventListener("beforeunload",e=>{if(S.ordens.some(o=>o.status==="Aberta")||pendentes().l){/* dados ficam salvos; aviso só informativo */}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(_){}
 render();
+if(online()){baixarCadastros(false).then(()=>{if(UI.tela==="login")suave()});enviar(false)}
+setInterval(()=>{if(online()&&UI.tela==="login"&&!document.hidden)baixarCadastros(false).then(()=>{if(UI.tela==="login")suave()})},20*60000);
 </script>
 </body>
 </html>

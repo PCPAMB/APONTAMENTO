@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Central</title>
+<title>ERP Produção – Central PCP</title>
 <style>
 :root{--lime:#CDFF00;--limeD:#708C00;--limeL:#F3FFCC;--dark:#1C1E1A;--bg:#F5F6F2;--bd:#D6DAD0;--tx:#1C1E1A;--tx2:#686E64;--okL:#D6F0E0;--warn:#E6A800;--warnL:#FFF3CD;--err:#DC3545;--errL:#FFE4E6}
 *{box-sizing:border-box}
@@ -62,6 +62,7 @@ tr.dup td{background:var(--errL)}
 <body>
 <div id="app"></div>
 <div class="toast" id="toast"></div>
+<script src="config.js" onerror="void 0"></script>
 <script>
 "use strict";
 /* ======================================================================
@@ -90,16 +91,27 @@ function kg(n){return Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits
 function opts(list,sel,ph){return (ph!==undefined?`<option value="">${esc(ph)}</option>`:"")+list.map(v=>`<option${v==sel?" selected":""}>${esc(v)}</option>`).join("")}
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3200)}
 
-/* ---------------- armazenamento (IndexedDB) ---------------- */
-function db(){return new Promise((res,rej)=>{const r=indexedDB.open("erp-producao-pcp",1);r.onupgradeneeded=()=>{r.result.createObjectStore("s")};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
-async function dbGet(k){try{const d=await db();return await new Promise(r=>{const q=d.transaction("s").objectStore("s").get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)})}catch(e){return null}}
-async function dbSet(k,v){try{const d=await db();await new Promise((r,j)=>{const t=d.transaction("s","readwrite");t.objectStore("s").put(v,k);t.oncomplete=r;t.onerror=()=>j(t.error)});return true}catch(e){toast("⚠ Não foi possível salvar neste navegador. Exporte as bases.");return false}}
-function novo(){return {cfg:{nome:"",pastaNome:""},bruta:{},trat:{},hist:[],par:{},arquivos:[]}}
-let P=novo();
-let salvando=null;function salvar(){clearTimeout(salvando);salvando=setTimeout(()=>dbSet("estado",P),150)}
-
+/* ---------------- servidor ---------------- */
+const KEYC="erp-producao-pcp-google";
+function lerCfg(){try{return JSON.parse(localStorage.getItem(KEYC))||{}}catch(e){return {}}}
+function gravarCfg(){try{localStorage.setItem(KEYC,JSON.stringify(P.cfg))}catch(e){}}
+let P={cfg:Object.assign({api:window.ERP_API||"",senha:"",nome:""},lerCfg()),bruta:{},trat:{},hist:[],par:{},ordens:[],planilha:"",carregadoEm:"",carregando:false,erro:""};
+if(!P.cfg.api)P.cfg.api=window.ERP_API||"";
+function salvar(){gravarCfg()}
+async function api(body,ms=25000){const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),ms);
+  try{const r=await fetch(P.cfg.api,{method:"POST",body:JSON.stringify(Object.assign({k:P.cfg.senha},body)),signal:ctl.signal});const j=await r.json();if(!j.ok)throw new Error(j.erro||"Erro");return j}
+  catch(e){if(e.name==="AbortError")throw new Error("Sem resposta do servidor");throw e}finally{clearTimeout(t)}}
+async function carregar(silencioso){if(!P.cfg.senha||P.carregando)return;P.carregando=true;if(!silencioso)render();
+  try{const f=UI.f;const j=await api({a:"pcp",de:f.de,ate:f.ate,q:f.ordem.trim()});
+    const st={};j.ordens.forEach(o=>st[o.Ordem]=o.Status);
+    P.trat={};j.trat.concat(j.pedidos||[]).forEach(t=>{P.trat[t.ID]=Object.assign({},t,{StatusTratado:t.StatusPCP,DataValidacao:t.ValidadoEm,StatusOrdem:st[t.Ordem]==="Encerrada"?"Encerrada":(st[t.Ordem]||"")})});
+    P.bruta={};j.bruta.forEach(b=>{P.bruta[b.ID]=Object.assign({},b,{Arquivo:"recebido em "+br(b.RecebidoEm)})});
+    P.hist=j.hist;if(j.cad)P.cfg.cad=j.cad;P.par={};j.par.forEach(p=>P.par[p.ID]=p);P.ordens=j.ordens;P.planilha=j.planilha;P.carregadoEm=nowIso();P.erro=""}
+  catch(e){P.erro=e.message;if(/negado/i.test(e.message)){P.cfg.senha="";salvar()}toast("Erro: "+e.message)}
+  finally{P.carregando=false;suave()}}
+setInterval(()=>{if(["painel","ordens","pedidos","paradas"].includes(UI.tela)&&!document.hidden)carregar(true)},60000);
 /* ---------------- estado da tela ---------------- */
-let UI={tela:"painel",f:{de:addDays(today(),-7),ate:today(),maq:"",st:"Todos",ordem:""},reg:null,cf:{},pf:{de:addDays(today(),-7),ate:today()}};
+let UI={tela:"painel",f:{de:addDays(today(),-7),ate:today(),maq:"",st:"Todos",ordem:""},reg:null,cf:{}};
 const TRAT=()=>Object.values(P.trat);
 
 /* ---------------- importação ---------------- */
@@ -141,10 +153,10 @@ function csv(rows,cols,fmt){return "﻿"+cols.join(";")+"\r\n"+rows.map(r=>cols.
 function fmtCell(c,v){if(typeof v==="number"&&/Kg$/.test(c))return String(v).replace(".",",");if(typeof v==="string"&&/^\d{4}-\d{2}-\d{2}/.test(v))return br(v);return v}
 
 /* ---------------- telas ---------------- */
-const NAV=[["painel","Painel"],["ordens","Ordens"],["pedidos","Pedidos de correção"],["paradas","Paradas"],["dados","Importar / Exportar"]];
+const NAV=[["painel","Painel"],["ordens","Ordens"],["pedidos","Pedidos de correção"],["paradas","Paradas"],["dados","Planilha e acesso"]];
 function header(){const ped=pedidos().length;
   return `<div class="hd"><div class="t">ERP Central PCP</div><div class="nav">${NAV.map(([k,n])=>`<button class="${UI.tela==k||(UI.tela=="conf"&&k=="painel")||(UI.tela=="hist"&&k=="painel")?"on":""}" data-tela="${k}">${n}${k=="pedidos"&&ped?` (${ped})`:""}</button>`).join("")}</div>
-  <div class="r"><button class="btn" data-act="importarPasta">Importar da pasta</button></div></div>`}
+  <div class="r"><span style="color:#cfd3c6;font-size:12.5px">${P.carregando?"Atualizando…":P.carregadoEm?"Atualizado às "+hh(P.carregadoEm):""}</span><button class="btn" data-act="atualizar">Atualizar</button></div></div>`}
 function pedidos(){return TRAT().filter(t=>t.PedidoCorrecao&&t.StatusTratado!=="Validado")}
 function linhas(){const f=UI.f;const q=f.ordem.trim().toUpperCase();
   let base=q?TRAT().filter(t=>t.Ordem.toUpperCase().includes(q)):TRAT().filter(t=>t.DataProducao>=f.de&&t.DataProducao<=f.ate);
@@ -154,10 +166,11 @@ function linhas(){const f=UI.f;const q=f.ordem.trim().toUpperCase();
 function chip(s){return `<span class="chip ${s=="Em conferência"?"":esc(s)}">${esc(s)}</span>`}
 
 function tela(){
-  if(!P.cfg.nome)return header()+`<div class="wrap"><div class="box" style="max-width:520px"><h4>Bem-vindo à Central PCP</h4>
-    <p>Informe seu nome. Ele fica registrado no histórico de cada correção e validação.</p><input class="in" id="nome" style="width:100%" placeholder="Seu nome">
-    <p style="margin-top:14px"><button class="btn big" data-act="salvarNome">Começar</button></p>
-    <p class="muted">Já usava a Central em outro computador? Depois de começar, vá em <b>Importar / Exportar → Restaurar backup</b>.</p></div></div>`;
+  if(!P.cfg.nome||!P.cfg.senha)return `<div class="hd"><div class="t">ERP Central PCP</div></div><div class="wrap"><div class="box" style="max-width:560px"><h4>Entrar na Central PCP</h4>
+    <span class="lbl">Seu nome (fica registrado no histórico de correções)</span><input class="in" id="nome" style="width:100%" value="${esc(P.cfg.nome)}" placeholder="Seu nome">
+    <span class="lbl">Senha da Central PCP (aba CONFIG da planilha)</span><input class="in" id="senha" type="password" style="width:100%" autocomplete="off">
+    <span class="lbl">Endereço do servidor</span><input class="in" id="apiUrl" style="width:100%;font-size:13px" value="${esc(P.cfg.api)}" placeholder="https://script.google.com/macros/s/…/exec">
+    <p style="margin-top:14px"><button class="btn big" data-act="entrarPcp">Entrar</button></p>${P.erro?`<p class="warn">${esc(P.erro)}</p>`:""}</div></div>`;
   switch(UI.tela){
   case "painel":{
     const {all,rows}=linhas();const f=UI.f;const maqs=[...new Set(TRAT().map(t=>t.Maquina))].sort();
@@ -174,8 +187,8 @@ function tela(){
       <div class="kpi"><b>${Math.round(all.reduce((s,t)=>s+t.PesoKg,0)).toLocaleString("pt-BR")} kg</b><span>Total ${f.ordem?"da busca":"no período"}</span></div>
       <div class="kpi w"><b>${pedidos().length}</b><span>Pedidos de correção</span></div></div>
     <div class="tw"><table><thead><tr><th>Ordem</th><th>Hora</th><th>Máquina</th><th>Material</th><th class="num">Peso (kg)</th><th>Qtd / acond.</th><th>Operador</th><th>Status</th></tr></thead><tbody>
-    ${rows.length?rows.map(t=>`<tr class="click${t.Dup>1?" dup":""}" data-reg="${esc(t.ID)}"><td><b>${esc(t.Ordem)}</b></td><td>${brc(t.HoraInicio)}–${hh(t.HoraFim)}</td><td>${esc(t.Maquina)}</td><td>${esc(t.Material)}</td><td class="num">${kg(t.PesoKg)}</td><td>${esc(t.Quantidade)} ${esc(t.Acondicionamento)}</td><td>${esc(t.Operador)}</td><td>${t.PedidoCorrecao&&t.StatusTratado!=="Validado"?`<span class="chip cs">Correção pedida</span>`:chip(t.StatusTratado)}</td></tr>`).join("")
-      :`<tr><td colspan="8" class="empty">${Object.keys(P.bruta).length?"Nada neste filtro.":"Nenhum dado ainda. Clique em <b>Importar da pasta</b> (ou vá em Importar / Exportar) e escolha a pasta com os arquivos exportados pelos aparelhos."}</td></tr>`}
+    ${P.carregando&&!rows.length?`<tr><td colspan="8" class="empty">Carregando…</td></tr>`:rows.length?rows.map(t=>`<tr class="click${t.Dup>1?" dup":""}" data-reg="${esc(t.ID)}"><td><b>${esc(t.Ordem)}</b></td><td>${brc(t.HoraInicio)}–${hh(t.HoraFim)}</td><td>${esc(t.Maquina)}</td><td>${esc(t.Material)}</td><td class="num">${kg(t.PesoKg)}</td><td>${esc(t.Quantidade)} ${esc(t.Acondicionamento)}</td><td>${esc(t.Operador)}</td><td>${t.PedidoCorrecao&&t.StatusTratado!=="Validado"?`<span class="chip cs">Correção pedida</span>`:chip(t.StatusTratado)}</td></tr>`).join("")
+      :`<tr><td colspan="8" class="empty">Nenhum lançamento neste filtro.</td></tr>`}
     </tbody></table></div><p class="muted">Linha vermelha = possível duplicidade (mesma hora lançada duas vezes na ordem, ou mesma máquina, hora e peso). Clique numa linha para conferir.</p></div>`}
   case "ordens":{
     const g={};TRAT().filter(t=>t.DataProducao>=UI.f.de&&t.DataProducao<=UI.f.ate).forEach(t=>{const o=g[t.Ordem]||(g[t.Ordem]={Ordem:t.Ordem,Data:t.DataProducao,Turno:t.Turno,Maquina:t.Maquina,Material:t.Material,Operador:t.Operador,St:t.StatusOrdem,h:0,kg:0,val:0});o.h++;o.kg+=t.PesoKg;if(t.StatusTratado=="Validado")o.val++;if(t.StatusOrdem=="Encerrada")o.St="Encerrada"});
@@ -216,61 +229,38 @@ function tela(){
   case "pedidos":{const L=pedidos().sort((a,b)=>b.HoraInicio.localeCompare(a.HoraInicio));
     return header()+`<div class="wrap"><div class="tw"><table><thead><tr><th>Ordem</th><th>Hora</th><th>Máquina</th><th class="num">Peso (kg)</th><th>Operador</th><th>Pedido do operador</th></tr></thead><tbody>
     ${L.length?L.map(t=>`<tr class="click" data-reg="${esc(t.ID)}"><td><b>${esc(t.Ordem)}</b></td><td>${brc(t.HoraInicio)}–${hh(t.HoraFim)}</td><td>${esc(t.Maquina)}</td><td class="num">${kg(t.PesoKg)}</td><td>${esc(t.Operador)}</td><td style="white-space:normal">${esc(t.PedidoCorrecao)}</td></tr>`).join(""):`<tr><td colspan="6" class="empty">Nenhum pedido pendente.</td></tr>`}</tbody></table></div></div>`}
-  case "paradas":{const f=UI.pf;const L=Object.values(P.par).filter(p=>p.DataProducao>=f.de&&p.DataProducao<=f.ate).sort((a,b)=>b.Inicio.localeCompare(a.Inicio));
+  case "paradas":{const f=UI.f;const L=Object.values(P.par).filter(p=>p.DataProducao>=f.de&&p.DataProducao<=f.ate).sort((a,b)=>b.Inicio.localeCompare(a.Inicio));
     const porMot={};L.forEach(p=>{porMot[p.Motivo]=(porMot[p.Motivo]||0)+p.DuracaoMin});const top=Object.entries(porMot).sort((a,b)=>b[1]-a[1]);
-    return header()+`<div class="wrap"><div class="filters"><div class="f"><span class="lbl">De</span><input class="in" type="date" data-pf="de" value="${f.de}"></div><div class="f"><span class="lbl">Até</span><input class="in" type="date" data-pf="ate" value="${f.ate}"></div></div>
+    return header()+`<div class="wrap"><div class="filters"><div class="f"><span class="lbl">De</span><input class="in" type="date" data-ff="de" value="${f.de}"></div><div class="f"><span class="lbl">Até</span><input class="in" type="date" data-ff="ate" value="${f.ate}"></div></div>
     <div class="cards" style="margin-bottom:14px"><div class="box"><h4>Minutos parados por motivo</h4>${top.length?`<table><tbody>${top.map(([m,v])=>`<tr><td>${esc(m)}</td><td class="num"><b>${v}</b> min</td></tr>`).join("")}</tbody></table>`:`<p class="muted">Sem paradas no período.</p>`}</div>
     <div class="box"><h4>Total</h4><p style="font-size:26px;font-weight:700;margin:0">${L.reduce((s,p)=>s+p.DuracaoMin,0)} min</p><p class="muted">${L.length} parada(s) no período</p></div></div>
     <div class="tw"><table><thead><tr><th>Início</th><th>Fim</th><th class="num">Min</th><th>Máquina</th><th>Motivo</th><th>Tipo</th><th>Ordem</th><th>Operador</th><th>Observação</th></tr></thead><tbody>
     ${L.length?L.map(p=>`<tr><td>${brc(p.Inicio)}</td><td>${hh(p.Fim)}</td><td class="num">${p.DuracaoMin}</td><td>${esc(p.Maquina)}</td><td>${esc(p.Motivo)}</td><td>${esc(p.Tipo)}</td><td>${esc(p.Ordem)}</td><td>${esc(p.Operador)}</td><td style="white-space:normal">${esc(p.Observacao)}</td></tr>`).join(""):`<tr><td colspan="9" class="empty">Nenhuma parada.</td></tr>`}</tbody></table></div></div>`}
   case "dados":{
     return header()+`<div class="wrap"><div class="cards">
-    <div class="box"><h4>1. Pasta de trabalho</h4><p>Escolha a pasta <b>PRODUÇÃO</b> sincronizada pelo OneDrive (a mesma onde os aparelhos exportam). A Central lê os arquivos dos aparelhos e grava as bases nela.</p>
-      <p>Atual: <b>${esc(P.cfg.pastaNome||"nenhuma")}</b></p><button class="btn sec" data-act="escolherPasta">Escolher pasta</button></div>
-    <div class="box"><h4>2. Importar lançamentos</h4><p>Lê todos os arquivos <b>LANCAMENTOS_*.csv</b> e <b>PARADAS_*.csv</b> da pasta (procura também nas subpastas). Arquivos já importados são ignorados.</p>
-      <button class="btn" data-act="importarPasta">Importar da pasta</button><span class="lbl">ou escolha arquivos manualmente</span><input type="file" id="arqs" multiple accept=".csv" class="in" style="padding-top:6px;width:100%"></div>
-    <div class="box"><h4>3. Exportar bases para o Excel</h4><p>Grava na pasta: <b>BASE_BRUTA.csv</b>, <b>BASE_TRATADA.csv</b>, <b>HISTORICO.csv</b>, <b>PARADAS.csv</b> e o backup <b>BACKUP_PCP.json</b>.</p>
-      <button class="btn" data-act="exportarBases">Exportar bases</button></div>
-    <div class="box"><h4>Situação</h4><p>${Object.keys(P.bruta).length} hora(s) na base · ${Object.keys(P.par).length} parada(s) · ${P.hist.length} alteração(ões) no histórico · ${P.arquivos.length} arquivo(s) importado(s).</p>
-      <p class="muted">Responsável nas correções: <b>${esc(P.cfg.nome)}</b> <button class="btn sec" data-act="trocarNome" style="padding:3px 10px">trocar</button></p></div>
-    <div class="box"><h4>Cadastros (opcional)</h4><p class="muted">Carregue o <b>cadastros_erp.json</b> para a conferência oferecer todas as máquinas e materiais (sem ele, usa os que já apareceram nos lançamentos). ${P.cfg.cad?`Carregado: ${P.cfg.cad.maq.length} máquinas, ${P.cfg.cad.mat.length} materiais.`:""}</p><input type="file" id="cadArq" accept=".json" class="in" style="padding-top:6px;width:100%"></div>
-    <div class="box"><h4>Restaurar backup</h4><p class="muted">Use para continuar o trabalho em outro computador: escolha o <b>BACKUP_PCP.json</b>. Substitui os dados deste navegador.</p><input type="file" id="restaurar" accept=".json" class="in" style="padding-top:6px;width:100%"></div>
-    </div></div>`}
+    <div class="box"><h4>Planilha Google</h4><p>Todas as abas: ORDENS, BASE_BRUTA (como o operador lançou, nunca alterada), BASE_TRATADA (corrigida), HISTORICO, PARADAS e cadastros.</p>
+      ${P.planilha?`<p><a class="btn" href="${esc(P.planilha)}" target="_blank" rel="noopener">Abrir a planilha</a></p>`:""}<p class="muted">Para análises no Excel: na planilha, Arquivo → Fazer download → Microsoft Excel.</p></div>
+    <div class="box"><h4>Cadastros e operadores</h4><p>Edite direto na planilha, nas abas CAD_Usuarios (nome, turno, PIN), CAD_Maquinas, CAD_Materiais, CAD_Motivos e CAD_Acond. Os aparelhos atualizam sozinhos.</p></div>
+    <div class="box"><h4>Acesso</h4><p class="muted">Responsável nas correções: <b>${esc(P.cfg.nome)}</b></p>
+      <p><button class="btn sec" data-act="sairPcp">Sair (esquecer a senha neste computador)</button></p></div></div></div>`}
   }
 }
 
 /* ---------------- ações ---------------- */
 const ACT={
-  salvarNome(){const n=$("#nome").value.trim();if(!n){toast("Informe seu nome.");return}P.cfg.nome=n;salvar()},
-  trocarNome(){P.cfg.nome="";salvar()},
-  limparBusca(){UI.f.ordem=""},
-  async escolherPasta(){if(!window.showDirectoryPicker){toast("Use Edge ou Chrome no computador para escolher a pasta.");return}
-    try{const h=await window.showDirectoryPicker({mode:"readwrite",id:"erp-pcp"});await dbSet("pasta",h);P.cfg.pastaNome=h.name;salvar();toast("Pasta escolhida: "+h.name)}catch(e){}},
-  async importarPasta(){let h=await hGet();
-    if(!h){if(!window.showDirectoryPicker){toast("Este navegador não lê pastas. Vá em Importar / Exportar e escolha os arquivos manualmente.");UI.tela="dados";return}
-      try{h=await window.showDirectoryPicker({mode:"readwrite",id:"erp-pcp"});await dbSet("pasta",h);P.cfg.pastaNome=h.name}catch(e){return}}
-    if(!await pastaPerm(h)){toast("Permissão para a pasta negada.");return}
-    const files=[];async function varrer(dir,prof){for await(const [nome,ent] of dir.entries()){if(ent.kind==="file"&&/^(LANCAMENTOS|PARADAS)_.*\.csv$/i.test(nome)&&!P.arquivos.includes(nome))files.push(await ent.getFile());else if(ent.kind==="directory"&&prof<2)await varrer(ent,prof+1)}}
-    await varrer(h,0);if(!files.length){toast("Nenhum arquivo novo na pasta.");return}await importarArquivos(files)},
-  async exportarBases(){
-    const cb=["ID","Ordem","DataProducao","Turno","Maquina","Material","HoraInicio","HoraFim","DuracaoMin","PesoKg","Quantidade","Acondicionamento","Observacao","Operador","StatusOrdem","PedidoCorrecao","Aparelho","LancadoEm","Arquivo"];
-    const ct=cb.filter(c=>c!=="Arquivo").concat(["StatusTratado","ValidadoPor","DataValidacao"]);
-    const ordB=Object.values(P.bruta).sort((a,b)=>a.HoraInicio.localeCompare(b.HoraInicio)),ordT=TRAT().sort((a,b)=>a.HoraInicio.localeCompare(b.HoraInicio));
-    let onde=await gravar("BASE_BRUTA.csv",csv(ordB,cb,fmtCell),"text/csv");
-    await gravar("BASE_TRATADA.csv",csv(ordT,ct,fmtCell),"text/csv");
-    await gravar("HISTORICO.csv",csv(P.hist,["ID","Ordem","Campo","ValorAnterior","ValorNovo","Responsavel","DataHora","Motivo"],fmtCell),"text/csv");
-    await gravar("PARADAS.csv",csv(Object.values(P.par),["ID","Ordem","Maquina","Motivo","Tipo","DataProducao","Inicio","Fim","DuracaoMin","Operador","Observacao","Aparelho","LancadoEm"],fmtCell),"text/csv");
-    await gravar("BACKUP_PCP.json",JSON.stringify(P),"application/json");
-    toast("Bases exportadas → "+(onde=="pasta"?"pasta "+P.cfg.pastaNome:"Downloads"))},
-  salvarCorr(){const r=P.trat[UI.reg],c=UI.cf;const pesoAnt=String(r.PesoKg).replace(".",",");
+  async entrarPcp(){const n=$("#nome").value.trim(),k=$("#senha").value.trim(),u=$("#apiUrl").value.trim();if(!n||!k||!u){toast("Preencha nome, senha e endereço.");return}
+    P.cfg.nome=n;P.cfg.senha=k;P.cfg.api=u;P.erro="";salvar();await carregar(false)},
+  sairPcp(){P.cfg.senha="";salvar();P.trat={};P.bruta={}},
+  atualizar(){return carregar(false)},
+  limparBusca(){UI.f.ordem="";carregar(false)},
+  async salvarCorr(){const r=P.trat[UI.reg],c=UI.cf;const pesoAnt=String(r.PesoKg).replace(".",",");
     const mud=[["PesoKg",pesoAnt,c.peso],["Quantidade",String(r.Quantidade??""),c.qtd],["Maquina",r.Maquina,c.maq],["Material",r.Material,c.mat],["Turno",r.Turno,c.turno],["Acondicionamento",r.Acondicionamento,c.acond]].filter(([,a,b])=>String(a)!=String(b));
     if(!mud.length){toast("Nenhuma alteração feita.");return}
     if(!c.motivo.trim()){toast("Informe o motivo da correção.");return}
     if(num(c.peso)<=0){toast("Peso inválido.");return}
-    const agora=nowIso();mud.forEach(([campo,a,b])=>P.hist.push({ID:r.ID,Ordem:r.Ordem,Campo:campo,ValorAnterior:a,ValorNovo:b,Responsavel:P.cfg.nome,DataHora:agora,Motivo:c.motivo.trim()}));
-    r.PesoKg=num(c.peso);r.Quantidade=c.qtd;r.Maquina=c.maq;r.Material=c.mat;r.Turno=c.turno;r.Acondicionamento=c.acond;r.StatusTratado="Corrigido";
-    salvar();UI.cf={};toast(mud.length+" campo(s) corrigido(s) e registrado(s) no histórico.")},
-  validar(){const r=P.trat[UI.reg];r.StatusTratado="Validado";r.ValidadoPor=P.cfg.nome;r.DataValidacao=nowIso();salvar();UI.tela="painel";toast("Hora validada.")},
+    try{const j=await api({a:"corrigir",id:r.ID,mud:mud.map(([k,,v])=>[k,k==="PesoKg"?String(num(v)):v]),motivo:c.motivo.trim(),resp:P.cfg.nome});
+      UI.cf={};toast(j.alteracoes+" campo(s) corrigido(s) e registrado(s) no histórico.");await carregar(true)}catch(e){toast("Erro: "+e.message)}},
+  async validar(){const r=P.trat[UI.reg];try{await api({a:"validar",id:r.ID,resp:P.cfg.nome});toast("Hora validada.");UI.tela="painel";await carregar(true)}catch(e){toast("Erro: "+e.message)}},
 };
 
 /* ---------------- eventos ---------------- */
@@ -278,26 +268,21 @@ let rendering=false;
 function render(){if(rendering)return;rendering=true;try{$("#app").innerHTML=tela()}finally{rendering=false}}
 function chave(el){return el.id||JSON.stringify(el.dataset)}
 function suave(){const a=document.activeElement,k=a&&chave(a),s=a&&a.selectionStart;render();const el=[...document.querySelectorAll("input,textarea,select")].find(x=>chave(x)===k);if(el){el.focus();try{if(s!=null)el.setSelectionRange(s,s)}catch(_){}}}
-document.addEventListener("click",async e=>{const t=e.target.closest("[data-tela],[data-act],[data-reg],[data-ordem]");if(!t||t.disabled)return;
+document.addEventListener("click",async e=>{const t=e.target.closest("[data-tela],[data-act],[data-reg],[data-ordem]");if(!t||t.disabled||t.tagName==="A")return;
   if(t.dataset.tela){UI.tela=t.dataset.tela;if(UI.tela!=="hist"&&UI.tela!=="conf")UI.cf={}}
   else if(t.dataset.act){await ACT[t.dataset.act]()}
   else if(t.dataset.reg){UI.reg=t.dataset.reg;UI.cf={};UI.tela="conf"}
-  else if(t.dataset.ordem){UI.f.ordem=t.dataset.ordem;UI.tela="painel"}
+  else if(t.dataset.ordem){UI.f.ordem=t.dataset.ordem;UI.tela="painel";render();carregar(false);return}
   render()});
 function campo(e){const t=e.target;
-  if(t.id==="arqs"&&e.type==="change"){importarArquivos([...t.files]);return}
-  if(t.id==="cadArq"&&e.type==="change"){const f=t.files[0];if(!f)return;f.text().then(x=>{try{const v=JSON.parse(x);if(!v.maq||!v.mat)throw 0;P.cfg.cad=v;salvar();toast("Cadastros carregados.");render()}catch(_){toast("Arquivo de cadastros inválido.")}});return}
-  if(t.id==="restaurar"&&e.type==="change"){const f=t.files[0];if(!f)return;f.text().then(x=>{try{const v=JSON.parse(x);if(!v.bruta||!v.trat)throw 0;P=v;salvar();toast("Backup restaurado.");render()}catch(_){toast("Arquivo de backup inválido.")}});return}
   let re=e.type==="change";
   if(t.dataset.c!==undefined)UI.cf[t.dataset.c]=t.value;
-  else if(t.dataset.ff!==undefined){UI.f[t.dataset.ff]=t.value;re=true}
-  else if(t.dataset.pf!==undefined){UI.pf[t.dataset.pf]=t.value;re=true}
-  else if(t.id==="fordem")UI.f.ordem=t.value;
+  else if(t.dataset.ff!==undefined){UI.f[t.dataset.ff]=t.value;re=true;if(t.dataset.ff==="de"||t.dataset.ff==="ate"){if(e.type==="change")carregar(true)}}
+  else if(t.id==="fordem"){UI.f.ordem=t.value;clearTimeout(window._bq);window._bq=setTimeout(()=>carregar(true),600)}
   else return;
   re?render():suave()}
 document.addEventListener("input",campo);document.addEventListener("change",campo);
-(async()=>{try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(_){}
-  const v=await dbGet("estado");if(v&&v.bruta)P=v;render()})();
+render();carregar(false);
 </script>
 </body>
 </html>
