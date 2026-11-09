@@ -134,9 +134,12 @@ async function enviar(manual){if(!online()||enviando)return;const tot=pendentesE
   catch(e){S.erroEnvio=e.message;salvar();if(manual)toast("Não enviou: "+e.message)}
   finally{enviando=false;if(["login","ordem","meus","admin"].includes(UI.tela))suave()}}
 setInterval(()=>enviar(false),30000);window.addEventListener("online",()=>enviar(false));
+/* número de ordem que já existia neste aparelho (de testes apagados da planilha): tira o histórico antigo já enviado */
+function descartarNumero(num){S.ordens=S.ordens.filter(x=>x.num!==num);S.lanc=S.lanc.filter(l=>!(l.ordem===num&&l.sync));S.paradas=S.paradas.filter(p=>!(p.ordem===num&&p.sync))}
 async function sincronizarOrdem(u){/* a ordem aberta pode ter sido começada em outro aparelho */
   if(!online())return;try{const j=await api({a:"ordemAberta",uid:u.id},8000);
-    if(j.ordem){let o=S.ordens.find(x=>x.num===j.ordem.num);if(!o){o=Object.assign({},j.ordem,{total:0,horas:0});S.ordens.push(o)}o.status="Aberta";
+    if(j.ordem){let o=S.ordens.find(x=>x.num===j.ordem.num);if(o&&o.abertura&&j.ordem.abertura&&o.abertura.slice(0,16)!==j.ordem.abertura.slice(0,16)){descartarNumero(o.num);o=null}
+      if(!o){o=Object.assign({},j.ordem,{total:0,horas:0});S.ordens.push(o)}else Object.assign(o,j.ordem);o.status="Aberta";
       j.linhas.forEach(l=>{if(!S.lanc.some(x=>x.id===l.id))S.lanc.push(l)});}
     else{S.ordens.filter(o=>o.uid===u.id&&o.status==="Aberta"&&!S.fila.some(f=>f.t==="enc"&&f.ordem===o.num)).forEach(o=>o.status="Encerrada")}
     salvar()}catch(e){}}
@@ -331,7 +334,8 @@ const ACT={
   sair(){UI.u=null;UI.tela="login";UI.confEnc=false;UI.h={};UI.form={};UI.par={};toast("Aparelho liberado para o próximo colaborador.")},
   async abrirOrdem(){const u=user(),f=UI.form;if(UI.abrindo)return;UI.abrindo=true;suave();
     try{const j=await api({a:"abrir",ordem:{tmp:Date.now(),uid:u.id,nome:u.nome,data:f.data,turno:f.turno,maq:f.maq,mat:f.mat,dev:S.cfg.dev}},20000);
-      S.seqO++;const o=Object.assign({n:S.seqO,total:0,horas:0,encerramento:""},j.ordem);if(!S.ordens.some(x=>x.num===o.num))S.ordens.push(o);
+      S.seqO++;const o=Object.assign({n:S.seqO,total:0,horas:0,encerramento:""},j.ordem);o.status="Aberta";
+      if(!j.existente)descartarNumero(o.num);const ex=S.ordens.find(x=>x.num===o.num);if(ex)Object.assign(ex,o);else S.ordens.push(o);
       salvar();UI.form={};UI.h={};UI.tela="ordem";toast("Ordem "+o.num+" aberta.")}
     catch(e){toast("Não foi possível abrir a ordem: "+e.message+". Verifique o wifi e tente de novo.")}
     finally{UI.abrindo=false}},
