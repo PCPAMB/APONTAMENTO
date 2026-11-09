@@ -49,7 +49,7 @@ td,th{padding:9px 8px;border-bottom:1px solid var(--bd);text-align:left}th{font-
 .tw{border:1px solid var(--bd);border-radius:10px;overflow:auto}
 .empty{padding:22px;text-align:center;color:var(--tx2)}
 .tot{font-size:18px;font-weight:600;margin:10px 0}
-.pin{font-size:24px;letter-spacing:8px}.pin::placeholder{letter-spacing:normal;font-size:16px}
+.pin{font-size:24px;letter-spacing:8px;-webkit-text-security:disc;text-security:disc}.pin::placeholder{letter-spacing:normal;font-size:16px}
 .adm h3{margin:18px 0 6px;font-size:16px}
 .adm table input,.adm table select{width:100%;height:36px;border:1px solid var(--bd);border-radius:6px;padding:0 6px;font-size:14px}
 .linkbtn{background:none;border:0;color:var(--tx2);text-decoration:underline;cursor:pointer;font-size:13px;padding:6px}
@@ -166,10 +166,11 @@ function tela(){
     const sel=S.users.find(x=>x.id===UI.sel);const pend=pendentes();const abertas=S.ordens.filter(o=>o.status==="Aberta");
     return hd("Quem está lançando?")+`<div class="body">
     ${!online()||!S.users.length?`<div class="warn">Aparelho ainda não configurado. Procure o responsável.</div>`:""}
-    <input class="in" id="busca" value="${esc(UI.busca)}" placeholder="Buscar meu nome" style="margin-bottom:10px">
-    ${us.map(x=>`<div class="card${x.id===UI.sel?" sel":""}" data-sel="${x.id}"><div class="l1"><span><b style="font-size:17px">${esc(x.nome)}</b><br><span class="muted">Turno ${esc(x.turno)}</span></span>${ordemAberta(x.id)?`<span class="chip on">Ordem aberta</span>`:""}</div></div>`).join("")}
+    <input class="in" id="busca" type="search" readonly onfocus="this.removeAttribute('readonly')" name="erp-busca-nome" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore value="${esc(UI.busca)}" placeholder="Buscar meu nome" style="margin-bottom:10px">
+    ${S.users.some(x=>x.dup)?`<div class="warn">ID repetido na planilha (aba CAD_Usuarios): ${esc([...new Set(S.users.filter(x=>x.dup).map(x=>x.id))].join(", "))}. Cada colaborador precisa de um ID diferente. Esses nomes ficam bloqueados até corrigir.</div>`:""}
+    ${us.map(x=>x.dup?`<div class="card" style="opacity:.55;cursor:not-allowed"><div class="l1"><span><b style="font-size:17px">${esc(x.nome)}</b><br><span class="muted">ID ${esc(x.id)} repetido — avise o responsável</span></span></div></div>`:`<div class="card${x.id===UI.sel?" sel":""}" data-sel="${x.id}"><div class="l1"><span><b style="font-size:17px">${esc(x.nome)}</b><br><span class="muted">Turno ${esc(x.turno)}</span></span>${ordemAberta(x.id)?`<span class="chip on">Ordem aberta</span>`:""}</div></div>`).join("")}
     <div class="lbl">${sel?"PIN de "+esc(sel.nome):"Toque no seu nome"}</div>
-    <input class="in pin" id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" value="${esc(UI.pin)}" placeholder="PIN (4 dígitos)">
+    <input class="in pin" id="pin" type="text" readonly onfocus="this.removeAttribute('readonly')" inputmode="numeric" maxlength="4" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore value="${esc(UI.pin)}" placeholder="PIN (4 dígitos)">
     ${online()?`<div class="box" style="margin-top:16px">${pendentesEnvio()?`<b>⏳ ${pendentesEnvio()} item(ns) aguardando internet</b><div class="muted" style="margin:4px 0 8px">Ficam guardados neste aparelho e são enviados sozinhos quando a internet voltar.${S.erroEnvio?" ("+esc(S.erroEnvio)+")":""}</div><button class="btn sec" data-act="enviarAgora">Enviar agora</button>`:`<b>✓ Tudo enviado</b><div class="muted">${S.ultimoEnvio?"Último envio: "+br(S.ultimoEnvio):"Lançamentos vão direto para o servidor."}${abertas.length?` · ${abertas.length} ordem(ns) aberta(s) neste aparelho`:""}</div>`}</div>`:""}
     <div style="text-align:center;margin-top:10px"><button class="linkbtn" data-go="admin">${S.cfg.adminPin?"Administração":"Configurar este aparelho"}</button></div></div>
     <div class="foot"><button class="btn" data-act="entrar"${sel&&UI.pin.length===4?"":" disabled"}>Entrar</button></div>`}
@@ -250,11 +251,11 @@ function tela(){
 /* ---------------- administração ---------------- */
 function telaAdmin(){
   if(!S.cfg.adminPin)return hd("Configuração inicial","login")+`<div class="body"><div class="info" style="margin-top:0">Primeiro acesso neste aparelho. Crie o PIN do administrador (de 4 a 8 dígitos). Guarde-o: ele protege os cadastros e as configurações.</div>
-    <div class="lbl">Novo PIN do administrador</div><input class="in pin" id="admNovo1" type="password" inputmode="numeric" maxlength="8" autocomplete="off">
-    <div class="lbl">Repita o PIN</div><input class="in pin" id="admNovo2" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></div>
+    <div class="lbl">Novo PIN do administrador</div><input class="in pin" id="admNovo1" type="text" inputmode="numeric" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore maxlength="8" autocomplete="off">
+    <div class="lbl">Repita o PIN</div><input class="in pin" id="admNovo2" type="text" inputmode="numeric" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore maxlength="8" autocomplete="off"></div>
     <div class="foot"><button class="btn" data-act="admCriar">Criar PIN e continuar</button></div>`;
   if(!UI.admOk)return hd("Administração","login")+`<div class="body"><div class="lbl">PIN do administrador</div>
-    <input class="in pin" id="admPin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" value="${esc(UI.admPin)}" placeholder="PIN do administrador">
+    <input class="in pin" id="admPin" type="text" readonly onfocus="this.removeAttribute('readonly')" inputmode="numeric" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore maxlength="8" autocomplete="off" value="${esc(UI.admPin)}" placeholder="PIN do administrador">
 </div><div class="foot"><button class="btn" data-act="admEntrar">Entrar</button></div>`;
   const t=UI.admTab;const tabs=[["cfg","Aparelho"],["op","Operadores"],["cad","Cadastros"],["dados","Dados"]];
   let c="";
@@ -314,7 +315,7 @@ function limpar(){const lim=addDays(today(),-60);S.lanc=S.lanc.filter(l=>!(l.syn
 
 /* ---------------- ações ---------------- */
 const ACT={
-  async entrar(){const x=S.users.find(y=>y.id===UI.sel);if(!x){return}
+  async entrar(){const x=S.users.find(y=>y.id===UI.sel&&!y.dup);if(!x){return}
     let ok=false;try{ok=(await sha(x.id+":"+UI.pin))===x.ph}catch(e){toast("Este navegador não suporta o login seguro. Use https.");return}
     if(!ok){toast("PIN incorreto.");UI.pin="";return}
     UI.u=x.id;UI.sel=null;UI.pin="";UI.busca="";UI.form={};UI.h={};UI.meusSel=null;UI.pedido="";
@@ -373,6 +374,7 @@ document.addEventListener("click",async e=>{
   render();
 });
 function campo(e){const t=e.target;
+  if(e.type==="input"&&["busca","pin","admPin","buscaMeus"].includes(t.id)&&document.activeElement!==t){const v={busca:UI.busca,pin:UI.pin,admPin:UI.admPin,buscaMeus:UI.buscaMeus}[t.id];t.value=v===undefined?"":v;return}
   if(t.id==="cadArq"&&e.type==="change"){const f=t.files[0];if(!f)return;f.text().then(x=>{try{const v=JSON.parse(x);if(!v.maq||!v.mat||!v.mot)throw 0;
     S.cad.maq=v.maq;S.cad.mat=v.mat;S.cad.mot=v.mot;if(v.acond)S.cad.acond=v.acond;salvar();toast(`Cadastros carregados: ${v.maq.length} máquinas, ${v.mat.length} materiais, ${v.mot.length} motivos.`);render()}catch(_){toast("Arquivo de cadastros inválido.")}});return}
   if(t.id==="restaurar"&&e.type==="change"){const f=t.files[0];if(!f)return;f.text().then(x=>{try{const v=JSON.parse(x);if(!v.cfg||!v.lanc)throw 0;S=v;salvar();toast("Backup restaurado.");render()}catch(_){toast("Arquivo de backup inválido.")}});return}
@@ -396,6 +398,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="pin"
 window.addEventListener("beforeunload",e=>{if(S.ordens.some(o=>o.status==="Aberta")||pendentes().l){/* dados ficam salvos; aviso só informativo */}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(_){}
 render();
+setInterval(()=>{if(UI.tela!=="login")return;const b=document.getElementById("busca"),p=document.getElementById("pin");
+  if(b&&document.activeElement!==b&&b.value!==UI.busca)b.value=UI.busca;if(p&&document.activeElement!==p&&p.value!==UI.pin)p.value=UI.pin},700);
 if(online()){baixarCadastros(false).then(()=>{if(UI.tela==="login")suave()});enviar(false)}
 setInterval(()=>{if(online()&&UI.tela==="login"&&!document.hidden)baixarCadastros(false).then(()=>{if(UI.tela==="login")suave()})},20*60000);
 </script>
