@@ -35,7 +35,7 @@ textarea.in{height:auto;min-height:80px;padding:10px 12px;resize:vertical}
 .box{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:10px 12px;font-size:15px}
 .warn{background:var(--warnL);border:1px solid var(--warn);border-radius:8px;padding:10px 12px;font-size:14.5px;margin-top:8px}
 .card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:11px 13px;margin-bottom:8px;cursor:pointer}
-.card.sel{background:var(--limeL);border:3px solid var(--limeD);padding:9px 11px}
+.card.escolhido{background:var(--limeL);border:3px solid var(--limeD);padding:9px 11px}
 .l1{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .chip{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--bg);white-space:nowrap}
 .chip.on{background:var(--lime)}.chip.cs{background:var(--warnL)}.chip.ok{background:var(--okL)}
@@ -55,6 +55,7 @@ td,th{padding:9px 8px;border-bottom:1px solid var(--bd);text-align:left}th{font-
 .linkbtn{background:none;border:0;color:var(--tx2);text-decoration:underline;cursor:pointer;font-size:13px;padding:6px}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--dark);color:var(--lime);padding:11px 18px;border-radius:9px;font-size:15px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9;max-width:90%;text-align:center}
 .toast.show{opacity:1}
+.chip.ok,.chip.cs,.chip.on{padding:3px 10px;text-align:left}
 </style>
 </head>
 <body>
@@ -168,7 +169,7 @@ function tela(){
     ${!online()||!S.users.length?`<div class="warn">Aparelho ainda não configurado. Procure o responsável.</div>`:""}
     <input class="in" id="busca" type="search" readonly onfocus="this.removeAttribute('readonly')" name="erp-busca-nome" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore value="${esc(UI.busca)}" placeholder="Buscar meu nome" style="margin-bottom:10px">
     ${S.users.some(x=>x.dup)?`<div class="warn">ID repetido na planilha (aba CAD_Usuarios): ${esc([...new Set(S.users.filter(x=>x.dup).map(x=>x.id))].join(", "))}. Cada colaborador precisa de um ID diferente. Esses nomes ficam bloqueados até corrigir.</div>`:""}
-    ${us.map(x=>x.dup?`<div class="card" style="opacity:.55;cursor:not-allowed"><div class="l1"><span><b style="font-size:17px">${esc(x.nome)}</b><br><span class="muted">ID ${esc(x.id)} repetido — avise o responsável</span></span></div></div>`:`<div class="card${x.id===UI.sel?" sel":""}" data-sel="${x.id}"><div class="l1"><span><b style="font-size:17px">${esc(x.nome)}</b><br><span class="muted">Turno ${esc(x.turno)}</span></span>${ordemAberta(x.id)?`<span class="chip on">Ordem aberta</span>`:""}</div></div>`).join("")}
+    ${us.map(x=>x.dup?`<div class="card" style="opacity:.55;cursor:not-allowed"><div class="l1"><span><b style="font-size:17px">${esc(x.nome)}</b><br><span class="muted">ID ${esc(x.id)} repetido — avise o responsável</span></span></div></div>`:`<div class="card${x.id===UI.sel?" escolhido":""}" data-sel="${x.id}"><div class="l1"><span><b style="font-size:17px">${esc(x.nome)}</b><br><span class="muted">Turno ${esc(x.turno)}</span></span>${ordemAberta(x.id)?`<span class="chip on">Ordem aberta</span>`:""}</div></div>`).join("")}
     <div class="lbl">${sel?"PIN de "+esc(sel.nome):"Toque no seu nome"}</div>
     <input class="in pin" id="pin" type="text" readonly onfocus="this.removeAttribute('readonly')" inputmode="numeric" maxlength="4" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore value="${esc(UI.pin)}" placeholder="PIN (4 dígitos)">
     ${online()?`<div class="box" style="margin-top:16px">${pendentesEnvio()?`<b>⏳ ${pendentesEnvio()} item(ns) aguardando internet</b><div class="muted" style="margin:4px 0 8px">Ficam guardados neste aparelho e são enviados sozinhos quando a internet voltar.${S.erroEnvio?" ("+esc(S.erroEnvio)+")":""}</div><button class="btn sec" data-act="enviarAgora">Enviar agora</button>`:`<b>✓ Tudo enviado</b><div class="muted">${S.ultimoEnvio?"Último envio: "+br(S.ultimoEnvio):"Lançamentos vão direto para o servidor."}${abertas.length?` · ${abertas.length} ordem(ns) aberta(s) neste aparelho`:""}</div>`}</div>`:""}
@@ -239,7 +240,7 @@ function tela(){
     const sel=S.lanc.find(l=>l.id===UI.meusSel);
     return hd("Meus lançamentos","inicio")+`<div class="body">
     <input class="in" id="buscaMeus" value="${esc(UI.buscaMeus)}" placeholder="Buscar nº da ordem (ex.: 000123)" style="margin-bottom:10px">
-    ${L.length?L.map(l=>`<div class="card${l.id===UI.meusSel?" sel":""}" data-meus="${l.id}"><div class="l1"><b>${l.ordem} <span style="font-weight:400;font-size:14px">${hh(l.ini)}–${hh(l.fim)}</span></b>${l.pedido?`<span class="chip cs">Correção pedida</span>`:l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</div>
+    ${L.length?L.map(l=>`<div class="card${l.id===UI.meusSel?" escolhido":""}" data-meus="${l.id}"><div class="l1"><b>${l.ordem} <span style="font-weight:400;font-size:14px">${hh(l.ini)}–${hh(l.fim)}</span></b>${l.pedido?`<span class="chip cs">Correção pedida</span>`:l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</div>
       <div style="font-size:14px;margin-top:3px">${esc(l.maq)} · ${esc(l.mat)}</div><div class="muted">${kg(l.peso)} kg · ${esc(l.qtd)} ${esc(l.acond)} · ${brc(l.ini)}</div></div>`).join(""):`<div class="empty">Nenhum lançamento nos últimos 30 dias.</div>`}
     <div class="lbl" style="margin-top:12px">${sel?"Pedir correção da hora "+hh(sel.ini)+"–"+hh(sel.fim)+" da ordem "+sel.ordem:"Selecione um lançamento acima para pedir correção"}</div>
     <textarea class="in" id="pedido" placeholder="Descreva o que precisa ser corrigido (ex.: o peso certo é 115 kg)">${esc(UI.pedido)}</textarea></div>
@@ -279,6 +280,8 @@ function telaAdmin(){
     <h3>Cópia de segurança em CSV</h3><p class="muted">Opcional: gera arquivos com todos os lançamentos guardados neste aparelho.</p>
     <button class="btn sec" data-act="exportarTudo">Baixar CSV de tudo</button>
     <h3>Backup e limpeza</h3><p class="muted">Lançamentos já enviados há mais de 60 dias são apagados deste aparelho automaticamente.</p>
+    <h3>Limpar histórico deste aparelho</h3><p class="muted">Apaga deste aparelho as horas, paradas e ordens <b>já enviadas</b> (por exemplo, depois dos testes). Nada é apagado da planilha, e o que ainda não foi enviado fica guardado. Ordens abertas voltam sozinhas do servidor quando o operador entrar.</p>
+    <button class="btn sec${UI.confLimpar?" warnb":""}" data-act="limparAparelho">${UI.confLimpar?"Toque de novo para confirmar":"Limpar histórico deste aparelho"}</button>
     <button class="btn sec" data-act="backup">Baixar backup completo (JSON)</button>
     <div class="lbl">Restaurar backup</div><input type="file" id="restaurar" accept=".json" class="in" style="padding-top:10px">`}
   return hd("Administração","login")+`<div class="body adm"><div style="display:flex;gap:6px;flex-wrap:wrap">${tabs.map(([k,n])=>`<button class="btn sm${t==k?"":" sec"}" data-admtab="${k}">${n}</button>`).join("")}</div>${c}</div>`;
@@ -320,6 +323,11 @@ const ACT={
     if(!ok){toast("PIN incorreto.");UI.pin="";return}
     UI.u=x.id;UI.sel=null;UI.pin="";UI.busca="";UI.form={};UI.h={};UI.meusSel=null;UI.pedido="";
     await sincronizarOrdem(x);UI.tela=ordemAberta()?"ordem":"inicio";toast("Olá, "+x.nome.split(" ")[0]+"!");enviar(false)},
+  limparAparelho(){if(!UI.confLimpar){UI.confLimpar=true;setTimeout(()=>{UI.confLimpar=false;suave()},5000);return}
+    UI.confLimpar=false;const antes=S.lanc.length+S.paradas.length;
+    const pendOrd=new Set(S.lanc.filter(l=>!l.sync).map(l=>l.ordem).concat(S.paradas.filter(p=>!p.sync).map(p=>p.ordem)).concat(S.fila.map(f=>f.ordem).filter(Boolean)));
+    S.lanc=S.lanc.filter(l=>!l.sync);S.paradas=S.paradas.filter(p=>!p.sync);S.ordens=S.ordens.filter(x=>pendOrd.has(x.num)||!x.num);
+    salvar();toast((antes-S.lanc.length-S.paradas.length)+" registro(s) apagado(s) deste aparelho.")},
   sair(){UI.u=null;UI.tela="login";UI.confEnc=false;UI.h={};UI.form={};UI.par={};toast("Aparelho liberado para o próximo colaborador.")},
   async abrirOrdem(){const u=user(),f=UI.form;if(UI.abrindo)return;UI.abrindo=true;suave();
     try{const j=await api({a:"abrir",ordem:{tmp:Date.now(),uid:u.id,nome:u.nome,data:f.data,turno:f.turno,maq:f.maq,mat:f.mat,dev:S.cfg.dev}},20000);
