@@ -169,14 +169,14 @@ function tela(){
     const q=UI.busca.trim().toLowerCase();const us=S.users.filter(x=>x.ativo&&(!q||x.nome.toLowerCase().includes(q))).sort((a,b)=>a.nome.localeCompare(b.nome));
     const sel=S.users.find(x=>x.id===UI.sel);const pend=pendentes();const abertas=S.ordens.filter(o=>o.status==="Aberta");
     return hd("Quem está lançando?")+`<div class="body">
-    ${!online()||!S.users.length?`<div class="warn">Aparelho ainda não configurado. Procure o responsável.</div>`:""}
+    ${!S.cfg.chave?`<div class="warn">Este aparelho ainda não está ligado ao sistema. Abra o <b>link de instalação</b> que o responsável enviou (ele já configura tudo).</div>`:!online()&&!S.users.length?`<div class="warn">Sem internet. Conecte ao wifi para baixar a lista de colaboradores.</div>`:!S.users.length?`<div class="warn">Baixando a lista de colaboradores…</div>`:""}
     <input class="in" id="busca" type="search" readonly onfocus="this.removeAttribute('readonly')" name="erp-busca-nome" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore value="${esc(UI.busca)}" placeholder="Buscar meu nome" style="margin-bottom:10px">
     ${S.users.some(x=>x.dup)?`<div class="warn">ID repetido na planilha (aba CAD_Usuarios): ${esc([...new Set(S.users.filter(x=>x.dup).map(x=>x.id))].join(", "))}. Cada colaborador precisa de um ID diferente. Esses nomes ficam bloqueados até corrigir.</div>`:""}
     ${us.map(x=>x.dup?`<div class="card" style="opacity:.55;cursor:not-allowed"><div class="l1"><span><b style="font-size:17px">${esc(x.nome)}</b><br><span class="muted">ID ${esc(x.id)} repetido — avise o responsável</span></span></div></div>`:`<div class="card${x.id===UI.sel?" escolhido":""}" data-sel="${x.id}"><div class="l1"><span><b style="font-size:17px">${esc(x.nome)}</b><br><span class="muted">Turno ${esc(x.turno)}</span></span>${ordemAberta(x.id)?`<span class="chip on">Ordem aberta</span>`:""}</div></div>`).join("")}
     <div class="lbl">${sel?"PIN de "+esc(sel.nome):"Toque no seu nome"}</div>
     <input class="in pin" id="pin" type="text" readonly onfocus="this.removeAttribute('readonly')" inputmode="numeric" maxlength="4" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore value="${esc(UI.pin)}" placeholder="PIN (4 dígitos)">
     ${online()?`<div class="box" style="margin-top:16px">${pendentesEnvio()?`<b>⏳ ${pendentesEnvio()} item(ns) aguardando internet</b><div class="muted" style="margin:4px 0 8px">Ficam guardados neste aparelho e são enviados sozinhos quando a internet voltar.${S.erroEnvio?" ("+esc(S.erroEnvio)+")":""}</div><button class="btn sec" data-act="enviarAgora">Enviar agora</button>`:`<b>✓ Tudo enviado</b><div class="muted">${S.ultimoEnvio?"Último envio: "+br(S.ultimoEnvio):"Lançamentos vão direto para o servidor."}${abertas.length?` · ${abertas.length} ordem(ns) aberta(s) neste aparelho`:""}</div>`}</div>`:""}
-    <div style="text-align:center;margin-top:10px"><button class="linkbtn" data-go="admin">${S.cfg.adminPin?"Administração":"Configurar este aparelho"}</button><div class="muted" style="font-size:11px;margin-top:6px">versão do app 1.4</div></div></div>
+    <div style="text-align:center;margin-top:10px"><button class="linkbtn" data-go="admin">${S.cfg.adminPin?"Administração":"Configurar este aparelho"}</button><div class="muted" style="font-size:11px;margin-top:6px">versão do app 1.5</div></div></div>
     <div class="foot"><button class="btn" data-act="entrar"${sel&&UI.pin.length===4?"":" disabled"}>Entrar</button></div>`}
   case "inicio":{
     const o=ordemAberta();const hoje=S.lanc.filter(l=>l.uid===u.id&&l.data===today()).length;
@@ -409,7 +409,13 @@ document.addEventListener("input",campo);document.addEventListener("change",camp
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="pin"||e.target.id==="admPin")){const b=document.querySelector('[data-act="entrar"],[data-act="admEntrar"]');if(b&&!b.disabled)b.click()}});
 window.addEventListener("beforeunload",e=>{if(S.ordens.some(o=>o.status==="Aberta")||pendentes().l){/* dados ficam salvos; aviso só informativo */}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(_){}
+/* link de instalação: ...APONTAMENTO/#chave=XXXX (a parte depois do # não vai para o GitHub, fica só no aparelho) */
+(function(){try{const h=new URLSearchParams(location.hash.slice(1));const k=(h.get("chave")||"").trim();if(!k)return;
+  S.cfg.chave=k;if(h.get("api"))S.cfg.api=h.get("api");if(!S.cfg.api)S.cfg.api=API_PADRAO;
+  if(!S.cfg.devAuto&&(!S.cfg.dev||S.cfg.dev==="01")){S.cfg.dev="C"+Math.random().toString(36).slice(2,6).toUpperCase();S.cfg.devAuto=true}
+  salvar();history.replaceState(null,"",location.pathname+location.search);window._instalado=true}catch(e){}})();
 render();
+if(window._instalado)baixarCadastros(false).then(()=>{toast(S.users.length?"Aparelho configurado. "+S.users.length+" colaborador(es).":"Aparelho ligado. Verifique a internet.");suave()}).catch(()=>toast("Não foi possível conectar. Verifique a internet e abra o link de novo."));
 setInterval(()=>{if(UI.tela!=="login")return;const b=document.getElementById("busca"),p=document.getElementById("pin");
   if(b&&document.activeElement!==b&&b.value!==UI.busca)b.value=UI.busca;if(p&&document.activeElement!==p&&p.value!==UI.pin)p.value=UI.pin},700);
 if(online()){baixarCadastros(false).then(()=>{if(UI.tela==="login")suave()});enviar(false)}
