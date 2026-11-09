@@ -13,6 +13,7 @@ body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;colo
 button,input,select,textarea{font:inherit;color:inherit}
 .app{width:100%;max-width:520px;min-height:100vh;background:var(--bg);display:flex;flex-direction:column;box-shadow:0 0 30px rgba(0,0,0,.12)}
 .hd{background:var(--dark);color:var(--lime);display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:5px solid var(--lime);min-height:66px;position:sticky;top:0;z-index:2}
+.hd .logo{height:22px;width:auto;flex:none}
 .hd .t{font-size:20px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .back{background:none;border:0;color:var(--lime);font-size:26px;cursor:pointer;padding:0 6px 0 0;line-height:1}
 .body{flex:1;padding:14px 18px}
@@ -116,7 +117,7 @@ async function api(body,ms=20000){const ctl=new AbortController();const t=setTim
   catch(e){if(e.name==="AbortError")throw new Error("Sem resposta do servidor (internet?)");throw e}finally{clearTimeout(t)}}
 async function sha(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
 async function baixarCadastros(avisar){if(!online())return false;
-  try{const j=await api({a:"cad"});S.users=j.users.map(u=>Object.assign({ativo:true},u));S.cad={maq:j.maq,mat:j.mat,mot:j.mot,acond:j.acond.length?j.acond:ACOND0.slice()};S.cadEm=nowIso();salvar();
+  try{const j=await api({a:"cad"});S.users=j.users.map(u=>Object.assign({ativo:true},u));S.pesoMax=j.pesoMax||3000;S.cad={maq:j.maq,mat:j.mat,mot:j.mot,acond:j.acond.length?j.acond:ACOND0.slice()};S.cadEm=nowIso();salvar();
     if(avisar)toast(`Conectado. ${j.users.length} operador(es), ${j.maq.length} máquinas, ${j.mat.length} materiais.`);return true}
   catch(e){if(avisar)toast("Falha: "+e.message);return false}}
 let enviando=false;
@@ -154,7 +155,7 @@ function horaOrdem(o,h){let i0=o.data+"T"+pad(h.hi)+":"+pad(h.mi);const f0=o.dat
 function span(data,hi,mi,hf,mf){const ini=data+"T"+pad(hi)+":"+pad(mi);let fd=data;if(+hf*60+ +mf< +hi*60+ +mi)fd=addDays(data,1);const fim=fd+"T"+pad(hf)+":"+pad(mf);return{ini,fim,dur:mins(ini,fim)}}
 
 /* ---------------- telas ---------------- */
-function hd(t,back,extra){return `<div class="hd">${back?`<button class="back" data-go="${back}" aria-label="Voltar">←</button>`:""}<div class="t">${esc(t)}</div>${extra||""}</div>`}
+function hd(t,back,extra){return `<div class="hd">${back?`<button class="back" data-go="${back}" aria-label="Voltar">←</button>`:`<img class="logo" src="logo.png" alt="Ambipar" onerror="this.remove()">`}<div class="t">${esc(t)}</div>${extra||""}</div>`}
 const SAIR=`<button class="btn sm" data-act="sair">Sair</button>`;
 
 function tela(){
@@ -206,7 +207,8 @@ function tela(){
     <div><div class="lbl">Acondicionamento *</div><select class="sel" data-h="acond">${opts(S.cad.acond,h.acond,"Selecione…")}</select></div>
     <div><div class="lbl">Observação</div><input class="in" data-h="obs" value="${esc(h.obs)}" placeholder="Opcional"></div></div>
     ${dup?`<div class="warn">⚠ Esta hora já foi lançada nesta ordem.</div>`:""}
-    <button class="btn" style="margin-top:12px" data-act="lancar"${h.acond&&num(h.peso)>0?"":" disabled"}>Lançar esta hora (${sp.dur} min)</button>
+    <button class="btn" style="margin-top:12px" data-act="lancar"${h.acond&&num(h.peso)>0&&num(h.peso)<=(S.pesoMax||3000)&&sp.dur>0?"":" disabled"}>Lançar esta hora (${sp.dur} min)</button>
+    ${num(h.peso)>(S.pesoMax||3000)?`<p class="warn">Peso acima de ${kg(S.pesoMax||3000)} kg em uma hora. Confira o valor digitado.</p>`:""}${sp.dur<=0?`<p class="warn">A hora final precisa ser depois da inicial.</p>`:""}
     <div class="lbl" style="margin-top:14px">Horas lançadas nesta ordem</div>
     <div class="tw"><table><tbody>${L.length?L.map(l=>`<tr><td><b>${hh(l.ini)}–${hh(l.fim)}</b></td><td class="num">${kg(l.peso)} kg</td><td>${esc(l.qtd)} ${esc(l.acond)}</td><td>${l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</td></tr>`).join(""):`<tr><td class="empty">Nenhuma hora lançada ainda.</td></tr>`}</tbody></table></div></div>
     <div class="foot"><button class="btn sec${UI.confEnc?" warnb":""}" data-act="encerrar">${UI.confEnc?"Toque de novo para confirmar":"Encerrar ordem (fim do turno)"}</button></div>`}
@@ -219,7 +221,7 @@ function tela(){
     <div class="foot"><button class="btn" data-go="abrir" style="margin-bottom:8px">Abrir nova ordem</button><button class="btn sec" data-act="sair">Sair (próximo colaborador)</button></div>`}
   case "parada":{
     const p=UI.par;const h=new Date().getHours();const oa=ordemAberta();p.data??=today();p.maq??=(oa&&oa.maq)||"";p.mot??="";p.hi??=h;p.mi??=0;p.hf??=h;p.mf??=0;p.obs??="";
-    const sp=span(p.data,p.hi,p.mi,p.hf,p.mf);const ok=p.maq&&p.mot;
+    const sp=span(p.data,p.hi,p.mi,p.hf,p.mf);const ok=p.maq&&p.mot&&sp.dur>0;
     return hd("Registrar parada","inicio")+`<div class="body">
     ${oa?`<div class="info" style="margin-top:0">Será ligada à ordem <b>${oa.num}</b></div>`:""}
     <div class="lbl">Máquina *</div><select class="sel" data-p="maq">${opts(S.cad.maq,p.maq,"Selecione…")}</select>
@@ -229,7 +231,7 @@ function tela(){
     <div><div class="lbl">Fim (h : min)</div><div class="hm"><select class="sel" data-p="hf">${hourOpts(p.hf)}</select><select class="sel" data-p="mf">${minOpts(p.mf)}</select></div></div></div>
     <div class="lbl">Observação</div><textarea class="in" data-p="obs" placeholder="Descreva o que aconteceu">${esc(p.obs)}</textarea>
     <div class="tot">Duração da parada: ${sp.dur} min</div></div>
-    <div class="foot"><button class="btn" data-act="salvarParada"${ok?"":" disabled"}>Registrar parada</button></div>`}
+    <div class="foot"><button class="btn" data-act="salvarParada"${ok?"":" disabled"}>${sp.dur>0?"Registrar parada ("+sp.dur+" min)":"Informe o fim da parada"}</button></div>`}
   case "meus":{
     const lim=addDays(today(),-30);const q=UI.buscaMeus.trim().toUpperCase();
     const L=S.lanc.filter(l=>l.uid===u.id&&l.data>=lim&&(!q||l.ordem.includes(q))).sort((a,b)=>b.ini.localeCompare(a.ini));

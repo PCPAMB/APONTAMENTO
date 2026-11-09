@@ -11,6 +11,7 @@
 body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--tx);background:var(--bg)}
 button,input,select,textarea{font:inherit;color:inherit}
 .hd{background:var(--dark);color:var(--lime);display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:5px solid var(--lime);flex-wrap:wrap;position:sticky;top:0;z-index:3}
+.hd .logo{height:24px;width:auto}
 .hd .t{font-size:20px;font-weight:600;margin-right:14px}
 .nav{display:flex;gap:6px;flex-wrap:wrap}
 .nav button{background:transparent;border:1px solid #4a4d45;color:#ddd;padding:7px 13px;border-radius:8px;cursor:pointer}
@@ -155,7 +156,7 @@ function fmtCell(c,v){if(typeof v==="number"&&/Kg$/.test(c))return String(v).rep
 /* ---------------- telas ---------------- */
 const NAV=[["painel","Painel"],["ordens","Ordens"],["pedidos","Pedidos de correção"],["paradas","Paradas"],["dados","Planilha e acesso"]];
 function header(){const ped=pedidos().length;
-  return `<div class="hd"><div class="t">ERP Central PCP</div><div class="nav">${NAV.map(([k,n])=>`<button class="${UI.tela==k||(UI.tela=="conf"&&k=="painel")||(UI.tela=="hist"&&k=="painel")?"on":""}" data-tela="${k}">${n}${k=="pedidos"&&ped?` (${ped})`:""}</button>`).join("")}</div>
+  return `<div class="hd"><img class="logo" src="logo.png" alt="Ambipar" onerror="this.remove()"><div class="t">Central PCP</div><div class="nav">${NAV.map(([k,n])=>`<button class="${UI.tela==k||(UI.tela=="conf"&&k=="painel")||(UI.tela=="hist"&&k=="painel")?"on":""}" data-tela="${k}">${n}${k=="pedidos"&&ped?` (${ped})`:""}</button>`).join("")}</div>
   <div class="r"><span style="color:#cfd3c6;font-size:12.5px">${P.carregando?"Atualizando…":P.carregadoEm?"Atualizado às "+hh(P.carregadoEm):""}</span><button class="btn" data-act="atualizar">Atualizar</button></div></div>`}
 function pedidos(){return TRAT().filter(t=>t.PedidoCorrecao&&t.StatusTratado!=="Validado")}
 function linhas(){const f=UI.f;const q=f.ordem.trim().toUpperCase();
@@ -166,7 +167,7 @@ function linhas(){const f=UI.f;const q=f.ordem.trim().toUpperCase();
 function chip(s){return `<span class="chip ${s=="Em conferência"?"":esc(s)}">${esc(s)}</span>`}
 
 function tela(){
-  if(!P.cfg.nome||!P.cfg.senha)return `<div class="hd"><div class="t">ERP Central PCP</div></div><div class="wrap"><div class="box" style="max-width:560px"><h4>Entrar na Central PCP</h4>
+  if(!P.cfg.nome||!P.cfg.senha)return `<div class="hd"><img class="logo" src="logo.png" alt="Ambipar" onerror="this.remove()"><div class="t">Central PCP</div></div><div class="wrap"><div class="box" style="max-width:560px"><h4>Entrar na Central PCP</h4>
     <span class="lbl">Seu nome (fica registrado no histórico de correções)</span><input class="in" id="nome" style="width:100%" value="${esc(P.cfg.nome)}" placeholder="Seu nome">
     <span class="lbl">Senha da Central PCP (aba CONFIG da planilha)</span><input class="in" id="senha" type="password" style="width:100%" autocomplete="off">
     <span class="lbl">Endereço do servidor</span><input class="in" id="apiUrl" style="width:100%;font-size:13px" value="${esc(P.cfg.api)}" placeholder="https://script.google.com/macros/s/…/exec">
