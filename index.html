@@ -176,7 +176,7 @@ function tela(){
     <div class="lbl">${sel?"PIN de "+esc(sel.nome):"Toque no seu nome"}</div>
     <input class="in pin" id="pin" type="text" readonly onfocus="this.removeAttribute('readonly')" inputmode="numeric" maxlength="4" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore value="${esc(UI.pin)}" placeholder="PIN (4 dígitos)">
     ${online()?`<div class="box" style="margin-top:16px">${pendentesEnvio()?`<b>⏳ ${pendentesEnvio()} item(ns) aguardando internet</b><div class="muted" style="margin:4px 0 8px">Ficam guardados neste aparelho e são enviados sozinhos quando a internet voltar.${S.erroEnvio?" ("+esc(S.erroEnvio)+")":""}</div><button class="btn sec" data-act="enviarAgora">Enviar agora</button>`:`<b>✓ Tudo enviado</b><div class="muted">${S.ultimoEnvio?"Último envio: "+br(S.ultimoEnvio):"Lançamentos vão direto para o servidor."}${abertas.length?` · ${abertas.length} ordem(ns) aberta(s) neste aparelho`:""}</div>`}</div>`:""}
-    <div style="text-align:center;margin-top:10px"><button class="linkbtn" data-go="admin">${S.cfg.adminPin?"Administração":"Configurar este aparelho"}</button><div class="muted" style="font-size:11px;margin-top:6px">versão do app 1.5</div></div></div>
+    <div style="text-align:center;margin-top:10px"><button class="linkbtn" data-go="admin">${S.cfg.adminPin?"Administração":"Configurar este aparelho"}</button><div class="muted" style="font-size:11px;margin-top:6px">versão do app 1.6</div></div></div>
     <div class="foot"><button class="btn" data-act="entrar"${sel&&UI.pin.length===4?"":" disabled"}>Entrar</button></div>`}
   case "inicio":{
     const o=ordemAberta();const hoje=S.lanc.filter(l=>l.uid===u.id&&l.data===today()).length;
@@ -201,21 +201,22 @@ function tela(){
     const L=linhasDe(o);const h=UI.h;
     if(h.hi===undefined){if(L.length){h.hi=+hh(L[0].fim).slice(0,2);h.mi=+hh(L[0].fim).slice(3)}else{h.hi=new Date().getHours();h.mi=0}h.hf=(h.hi+1)%24;h.mf=h.mi}
     h.peso??="";h.qtd??="";h.acond??=(L[0]&&L[0].acond)||"";h.obs??="";
-    const sp=horaOrdem(o,h);const dup=L.some(l=>l.ini===sp.ini);const tot=L.reduce((s,l)=>s+l.peso,0);
+    const sp=horaOrdem(o,h);const pu=num(h.peso),qt=parseInt(h.qtd,10)>0?parseInt(h.qtd,10):1,totH=pu*qt;const dup=L.some(l=>l.ini===sp.ini);const tot=L.reduce((s,l)=>s+l.peso,0);
     return hd("Ordem "+o.num,"inicio",SAIR)+`<div class="body">
     <div class="info" style="margin-top:0">${esc(o.maq)} · Turno ${esc(o.turno)} · ${brc(o.data)}<br>${esc(o.mat)}</div>
     <div class="tot">Lançado: ${L.length} hora(s) · ${kg(tot)} kg</div>
     <div class="row2"><div><div class="lbl">Hora início (h : min)</div><div class="hm"><select class="sel" data-h="hi">${hourOpts(h.hi)}</select><select class="sel" data-h="mi">${minOpts(h.mi)}</select></div></div>
     <div><div class="lbl">Hora fim (h : min)</div><div class="hm"><select class="sel" data-h="hf">${hourOpts(h.hf)}</select><select class="sel" data-h="mf">${minOpts(h.mf)}</select></div></div></div>
-    <div class="row2"><div><div class="lbl">Peso da hora (kg) *</div><input class="in" inputmode="decimal" data-h="peso" value="${esc(h.peso)}" placeholder="0,00"></div>
-    <div><div class="lbl">Quantidade</div><input class="in" inputmode="numeric" data-h="qtd" value="${esc(h.qtd)}" placeholder="0"></div>
+    <div class="row2"><div><div class="lbl">Peso por unidade (kg) *</div><input class="in" inputmode="decimal" data-h="peso" value="${esc(h.peso)}" placeholder="0,00"></div>
+    <div><div class="lbl">Quantidade (unidades)</div><input class="in" inputmode="numeric" data-h="qtd" value="${esc(h.qtd)}" placeholder="1"></div>
     <div><div class="lbl">Acondicionamento *</div><select class="sel" data-h="acond">${opts(S.cad.acond,h.acond,"Selecione…")}</select></div>
     <div><div class="lbl">Observação</div><input class="in" data-h="obs" value="${esc(h.obs)}" placeholder="Opcional"></div></div>
+    <div class="box" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center"><span>Total da hora<br><span class="muted">${pu?kg(pu)+" kg × "+qt+(h.qtd?"":" (quantidade vazia = 1)"):"peso × quantidade"}</span></span><b style="font-size:22px">${kg(totH)} kg</b></div>
     ${dup?`<div class="warn">⚠ Esta hora já foi lançada nesta ordem.</div>`:""}
-    <button class="btn" style="margin-top:12px" data-act="lancar"${h.acond&&num(h.peso)>0&&num(h.peso)<=(S.pesoMax||3000)&&sp.dur>0?"":" disabled"}>Lançar esta hora (${sp.dur} min)</button>
-    ${num(h.peso)>(S.pesoMax||3000)?`<p class="warn">Peso acima de ${kg(S.pesoMax||3000)} kg em uma hora. Confira o valor digitado.</p>`:""}${sp.dur<=0?`<p class="warn">A hora final precisa ser depois da inicial.</p>`:""}
+    <button class="btn" style="margin-top:12px" data-act="lancar"${h.acond&&pu>0&&totH<=(S.pesoMax||3000)&&sp.dur>0?"":" disabled"}>Lançar esta hora (${sp.dur} min)</button>
+    ${totH>(S.pesoMax||3000)?`<p class="warn">Total de ${kg(totH)} kg passa do limite de ${kg(S.pesoMax||3000)} kg por hora. Confira o peso e a quantidade.</p>`:""}${sp.dur<=0?`<p class="warn">A hora final precisa ser depois da inicial.</p>`:""}
     <div class="lbl" style="margin-top:14px">Horas lançadas nesta ordem</div>
-    <div class="tw"><table><tbody>${L.length?L.map(l=>`<tr><td><b>${hh(l.ini)}–${hh(l.fim)}</b></td><td class="num">${kg(l.peso)} kg</td><td>${esc(l.qtd)} ${esc(l.acond)}</td><td>${l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</td></tr>`).join(""):`<tr><td class="empty">Nenhuma hora lançada ainda.</td></tr>`}</tbody></table></div></div>
+    <div class="tw"><table><tbody>${L.length?L.map(l=>`<tr><td><b>${hh(l.ini)}–${hh(l.fim)}</b></td><td class="num">${kg(l.peso)} kg${l.pu&&l.qtd>1?`<br><span class="muted">${kg(l.pu)} × ${l.qtd}</span>`:""}</td><td>${esc(l.qtd)} ${esc(l.acond)}</td><td>${l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</td></tr>`).join(""):`<tr><td class="empty">Nenhuma hora lançada ainda.</td></tr>`}</tbody></table></div></div>
     <div class="foot"><button class="btn sec${UI.confEnc?" warnb":""}" data-act="encerrar">${UI.confEnc?"Toque de novo para confirmar":"Encerrar ordem (fim do turno)"}</button></div>`}
   case "encerrada":{
     const o=S.ordens.find(x=>x.num===UI.ultima);if(!o){UI.tela="inicio";return tela()}
@@ -244,7 +245,7 @@ function tela(){
     return hd("Meus lançamentos","inicio")+`<div class="body">
     <input class="in" id="buscaMeus" value="${esc(UI.buscaMeus)}" placeholder="Buscar nº da ordem (ex.: 000123)" style="margin-bottom:10px">
     ${L.length?L.map(l=>`<div class="card${l.id===UI.meusSel?" escolhido":""}" data-meus="${l.id}"><div class="l1"><b>${l.ordem} <span style="font-weight:400;font-size:14px">${hh(l.ini)}–${hh(l.fim)}</span></b>${l.pedido?`<span class="chip cs">Correção pedida</span>`:l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</div>
-      <div style="font-size:14px;margin-top:3px">${esc(l.maq)} · ${esc(l.mat)}</div><div class="muted">${kg(l.peso)} kg · ${esc(l.qtd)} ${esc(l.acond)} · ${brc(l.ini)}</div></div>`).join(""):`<div class="empty">Nenhum lançamento nos últimos 30 dias.</div>`}
+      <div style="font-size:14px;margin-top:3px">${esc(l.maq)} · ${esc(l.mat)}</div><div class="muted">${kg(l.peso)} kg${l.pu&&l.qtd>1?" ("+kg(l.pu)+" × "+l.qtd+")":""} · ${esc(l.qtd)} ${esc(l.acond)} · ${brc(l.ini)}</div></div>`).join(""):`<div class="empty">Nenhum lançamento nos últimos 30 dias.</div>`}
     <div class="lbl" style="margin-top:12px">${sel?"Pedir correção da hora "+hh(sel.ini)+"–"+hh(sel.fim)+" da ordem "+sel.ordem:"Selecione um lançamento acima para pedir correção"}</div>
     <textarea class="in" id="pedido" placeholder="Descreva o que precisa ser corrigido (ex.: o peso certo é 115 kg)">${esc(UI.pedido)}</textarea></div>
     <div class="foot"><button class="btn" data-act="pedir"${sel&&UI.pedido.trim()?"":" disabled"}>Pedir correção</button></div>`}
@@ -340,8 +341,8 @@ const ACT={
     catch(e){toast("Não foi possível abrir a ordem: "+e.message+". Verifique o wifi e tente de novo.")}
     finally{UI.abrindo=false}},
   lancar(){const u=user(),o=ordemAberta(),h=UI.h,sp=horaOrdem(o,h);S.seqL++;
-    S.lanc.push({id:S.cfg.dev+"-L"+pad(S.seqL,6)+"-"+Date.now().toString(36),ordem:o.num,uid:u.id,nome:u.nome,data:o.data,turno:o.turno,maq:o.maq,mat:o.mat,ini:sp.ini,fim:sp.fim,dur:sp.dur,peso:num(h.peso),qtd:h.qtd?parseInt(h.qtd,10):"",acond:h.acond,obs:h.obs,criado:nowIso(),sync:false,pedido:""});
-    salvar();enviar(false);toast("Hora "+hh(sp.ini)+"–"+hh(sp.fim)+" lançada: "+h.peso+" kg");UI.h={acond:h.acond};UI.confEnc=false},
+    S.lanc.push({id:S.cfg.dev+"-L"+pad(S.seqL,6)+"-"+Date.now().toString(36),ordem:o.num,uid:u.id,nome:u.nome,data:o.data,turno:o.turno,maq:o.maq,mat:o.mat,ini:sp.ini,fim:sp.fim,dur:sp.dur,peso:Math.round(num(h.peso)*(parseInt(h.qtd,10)>0?parseInt(h.qtd,10):1)*100)/100,pu:num(h.peso),qtd:parseInt(h.qtd,10)>0?parseInt(h.qtd,10):1,acond:h.acond,obs:h.obs,criado:nowIso(),sync:false,pedido:""});
+    salvar();enviar(false);toast("Hora "+hh(sp.ini)+"–"+hh(sp.fim)+" lançada: "+kg(S.lanc[S.lanc.length-1].peso)+" kg");UI.h={acond:h.acond};UI.confEnc=false},
   encerrar(){if(!UI.confEnc){UI.confEnc=true;return}const o=ordemAberta();const L=linhasDe(o);o.status="Encerrada";o.encerramento=nowIso();o.total=L.reduce((s,l)=>s+l.peso,0);o.horas=L.length;
     S.fila.push({t:"enc",ordem:o.num,quando:o.encerramento});
     salvar();enviar(false);UI.confEnc=false;UI.ultima=o.num;UI.tela="encerrada"},
