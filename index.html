@@ -136,6 +136,8 @@ async function enviar(manual){if(!online()||enviando)return;const tot=pendentesE
 setInterval(()=>enviar(false),30000);window.addEventListener("online",()=>enviar(false));
 /* número de ordem que já existia neste aparelho (de testes apagados da planilha): tira o histórico antigo já enviado */
 function descartarNumero(num){S.ordens=S.ordens.filter(x=>x.num!==num);S.lanc=S.lanc.filter(l=>!(l.ordem===num&&l.sync));S.paradas=S.paradas.filter(p=>!(p.ordem===num&&p.sync))}
+/* "joão,maria ;  pedro" -> "João, Maria, Pedro" */
+function equipeTxt(v){return String(v||"").split(/[,;]+/).map(x=>x.trim().replace(/\s+/g," ")).filter(Boolean).map(x=>x.replace(/(^|\s)(\p{L})/gu,(m,a,b)=>a+b.toUpperCase())).join(", ")}
 async function sincronizarOrdem(u){/* a ordem aberta pode ter sido começada em outro aparelho */
   if(!online())return;try{const j=await api({a:"ordemAberta",uid:u.id},8000);
     if(j.ordem){let o=S.ordens.find(x=>x.num===j.ordem.num);if(o&&o.abertura&&j.ordem.abertura&&o.abertura.slice(0,16)!==j.ordem.abertura.slice(0,16)){descartarNumero(o.num);o=null}
@@ -176,7 +178,7 @@ function tela(){
     <div class="lbl">${sel?"PIN de "+esc(sel.nome):"Toque no seu nome"}</div>
     <input class="in pin" id="pin" type="text" readonly onfocus="this.removeAttribute('readonly')" inputmode="numeric" maxlength="4" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore value="${esc(UI.pin)}" placeholder="PIN (4 dígitos)">
     ${online()?`<div class="box" style="margin-top:16px">${pendentesEnvio()?`<b>⏳ ${pendentesEnvio()} item(ns) aguardando internet</b><div class="muted" style="margin:4px 0 8px">Ficam guardados neste aparelho e são enviados sozinhos quando a internet voltar.${S.erroEnvio?" ("+esc(S.erroEnvio)+")":""}</div><button class="btn sec" data-act="enviarAgora">Enviar agora</button>`:`<b>✓ Tudo enviado</b><div class="muted">${S.ultimoEnvio?"Último envio: "+br(S.ultimoEnvio):"Lançamentos vão direto para o servidor."}${abertas.length?` · ${abertas.length} ordem(ns) aberta(s) neste aparelho`:""}</div>`}</div>`:""}
-    <div style="text-align:center;margin-top:10px"><button class="linkbtn" data-go="admin">${S.cfg.adminPin?"Administração":"Configurar este aparelho"}</button><div class="muted" style="font-size:11px;margin-top:6px">versão do app 1.7</div></div></div>
+    <div style="text-align:center;margin-top:10px"><button class="linkbtn" data-go="admin">${S.cfg.adminPin?"Administração":"Configurar este aparelho"}</button><div class="muted" style="font-size:11px;margin-top:6px">versão do app 1.8</div></div></div>
     <div class="foot"><button class="btn" data-act="entrar"${sel&&UI.pin.length===4?"":" disabled"}>Entrar</button></div>`}
   case "inicio":{
     const o=ordemAberta();const hoje=S.lanc.filter(l=>l.uid===u.id&&l.data===today()).length;
@@ -211,12 +213,13 @@ function tela(){
     <div><div class="lbl">Quantidade (unidades)</div><input class="in" inputmode="numeric" data-h="qtd" value="${esc(h.qtd)}" placeholder="1"></div>
     <div><div class="lbl">Acondicionamento *</div><select class="sel" data-h="acond">${opts(S.cad.acond,h.acond,"Selecione…")}</select></div>
     <div><div class="lbl">Observação</div><input class="in" data-h="obs" value="${esc(h.obs)}" placeholder="Opcional"></div></div>
+    <div style="margin-top:10px"><div class="lbl">Equipe (nomes separados por vírgula)</div><input class="in" data-h="eq" value="${esc(h.eq!==undefined?h.eq:(o.equipe||""))}" placeholder="ex.: João, Maria, Pedro" autocomplete="off" autocapitalize="words"></div>
     <div class="box" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center"><span>Total da hora<br><span class="muted">${pu?kg(pu)+" kg × "+qt+(h.qtd?"":" (quantidade vazia = 1)"):"peso × quantidade"}</span></span><b style="font-size:22px">${kg(totH)} kg</b></div>
     ${dup?`<div class="warn">⚠ Esta hora já foi lançada nesta ordem.</div>`:""}
     <button class="btn" style="margin-top:12px" data-act="lancar"${h.acond&&pu>0&&totH<=(S.pesoMax||3000)&&sp.dur>0?"":" disabled"}>Lançar esta hora (${sp.dur} min)</button>
     ${totH>(S.pesoMax||3000)?`<p class="warn">Total de ${kg(totH)} kg passa do limite de ${kg(S.pesoMax||3000)} kg por hora. Confira o peso e a quantidade.</p>`:""}${sp.dur<=0?`<p class="warn">A hora final precisa ser depois da inicial.</p>`:""}
     <div class="lbl" style="margin-top:14px">Horas lançadas nesta ordem</div>
-    <div class="tw"><table><tbody>${L.length?L.map(l=>`<tr><td><b>${hh(l.ini)}–${hh(l.fim)}</b></td><td class="num">${kg(l.peso)} kg${l.pu&&l.qtd>1?`<br><span class="muted">${kg(l.pu)} × ${l.qtd}</span>`:""}</td><td>${esc(l.qtd)} ${esc(l.acond)}</td><td>${l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</td></tr>`).join(""):`<tr><td class="empty">Nenhuma hora lançada ainda.</td></tr>`}</tbody></table></div></div>
+    <div class="tw"><table><tbody>${L.length?L.map(l=>`<tr><td><b>${hh(l.ini)}–${hh(l.fim)}</b></td><td class="num">${kg(l.peso)} kg${l.pu&&l.qtd>1?`<br><span class="muted">${kg(l.pu)} × ${l.qtd}</span>`:""}</td><td>${esc(l.qtd)} ${esc(l.acond)}</td><td>${l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</td></tr>${l.equipe?`<tr><td colspan="4" class="muted" style="white-space:normal;padding-top:0;font-size:13px">👥 Equipe: ${esc(l.equipe)}</td></tr>`:""}`).join(""):`<tr><td class="empty">Nenhuma hora lançada ainda.</td></tr>`}</tbody></table></div></div>
     ${!L.length&&!S.paradas.some(p=>p.ordem===o.num)?`<div style="margin-top:14px;text-align:center"><button class="linkbtn" data-act="cancelarOrdem" style="color:${UI.confCanc?"#b3261e":"inherit"}">${UI.confCanc?"Toque de novo para CANCELAR a "+o.num:"Abri esta ordem por engano: cancelar"}</button><div class="muted" style="font-size:11.5px">Só é possível enquanto nenhuma hora foi lançada. Fica registrado.</div></div>`:""}
     <div class="foot"><button class="btn sec${UI.confEnc?" warnb":""}" data-act="encerrar">${UI.confEnc?"Toque de novo para confirmar":"Encerrar ordem (fim do turno)"}</button></div>`}
   case "encerrada":{
@@ -342,7 +345,8 @@ const ACT={
     catch(e){toast("Não foi possível abrir a ordem: "+e.message+". Verifique o wifi e tente de novo.")}
     finally{UI.abrindo=false}},
   lancar(){const u=user(),o=ordemAberta(),h=UI.h,sp=horaOrdem(o,h);S.seqL++;
-    S.lanc.push({id:S.cfg.dev+"-L"+pad(S.seqL,6)+"-"+Date.now().toString(36),ordem:o.num,uid:u.id,nome:u.nome,data:o.data,turno:o.turno,maq:o.maq,mat:o.mat,ini:sp.ini,fim:sp.fim,dur:sp.dur,peso:Math.round(num(h.peso)*(parseInt(h.qtd,10)>0?parseInt(h.qtd,10):1)*100)/100,pu:num(h.peso),qtd:parseInt(h.qtd,10)>0?parseInt(h.qtd,10):1,acond:h.acond,obs:h.obs,criado:nowIso(),sync:false,pedido:""});
+    S.lanc.push({id:S.cfg.dev+"-L"+pad(S.seqL,6)+"-"+Date.now().toString(36),ordem:o.num,uid:u.id,nome:u.nome,data:o.data,turno:o.turno,maq:o.maq,mat:o.mat,ini:sp.ini,fim:sp.fim,dur:sp.dur,peso:Math.round(num(h.peso)*(parseInt(h.qtd,10)>0?parseInt(h.qtd,10):1)*100)/100,pu:num(h.peso),qtd:parseInt(h.qtd,10)>0?parseInt(h.qtd,10):1,acond:h.acond,obs:h.obs,equipe:equipeTxt(h.eq!==undefined?h.eq:o.equipe),criado:nowIso(),sync:false,pedido:""});
+    o.equipe=S.lanc[S.lanc.length-1].equipe;
     salvar();enviar(false);toast("Hora "+hh(sp.ini)+"–"+hh(sp.fim)+" lançada: "+kg(S.lanc[S.lanc.length-1].peso)+" kg");UI.h={acond:h.acond};UI.confEnc=false},
   async cancelarOrdem(){if(!UI.confCanc){UI.confCanc=true;setTimeout(()=>{UI.confCanc=false;suave()},5000);return}UI.confCanc=false;
     const o=ordemAberta(),u=user();if(!o)return;if(!online()){toast("Sem internet: conecte ao wifi para cancelar.");return}
