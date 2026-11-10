@@ -104,13 +104,13 @@ async function api(body,ms=25000){const ctl=new AbortController();const t=setTim
   catch(e){if(e.name==="AbortError")throw new Error("Sem resposta do servidor");throw e}finally{clearTimeout(t)}}
 async function carregar(silencioso){if(!P.cfg.senha||P.carregando)return;P.carregando=true;if(!silencioso)render();
   try{const f=UI.f;const j=await api({a:"pcp",de:f.de,ate:f.ate,q:f.ordem.trim()});
-    const st={};j.ordens.forEach(o=>st[o.Ordem]=o.Status);
+    const st={};j.ordens.forEach(o=>st[o.Ordem]=o.Status);P.stOrd=st;
     P.trat={};j.trat.concat(j.pedidos||[]).forEach(t=>{P.trat[t.ID]=Object.assign({},t,{StatusTratado:t.StatusPCP,DataValidacao:t.ValidadoEm,StatusOrdem:st[t.Ordem]==="Encerrada"?"Encerrada":(st[t.Ordem]||"")})});
     P.bruta={};j.bruta.forEach(b=>{P.bruta[b.ID]=Object.assign({},b,{Arquivo:"recebido em "+br(b.RecebidoEm)})});
-    P.hist=j.hist;if(j.cad)P.cfg.cad=j.cad;P.par={};j.par.forEach(p=>P.par[p.ID]=p);P.ordens=j.ordens;P.planilha=j.planilha;P.carregadoEm=nowIso();P.erro=""}
+    P.hist=j.hist;P.log=j.log||[];if(j.cad)P.cfg.cad=j.cad;P.par={};j.par.forEach(p=>P.par[p.ID]=p);P.ordens=j.ordens;P.planilha=j.planilha;P.carregadoEm=nowIso();P.erro=""}
   catch(e){P.erro=e.message;if(/negado/i.test(e.message)){P.cfg.senha="";salvar()}toast("Erro: "+e.message)}
   finally{P.carregando=false;suave()}}
-setInterval(()=>{if(["painel","ordens","pedidos","paradas"].includes(UI.tela)&&!document.hidden)carregar(true)},60000);
+setInterval(()=>{if(["painel","ordens","pedidos","paradas","log"].includes(UI.tela)&&!document.hidden)carregar(true)},60000);
 /* ---------------- estado da tela ---------------- */
 let UI={tela:"painel",f:{de:addDays(today(),-7),ate:today(),maq:"",st:"Todos",ordem:""},reg:null,cf:{}};
 const TRAT=()=>Object.values(P.trat);
@@ -154,7 +154,7 @@ function csv(rows,cols,fmt){return "﻿"+cols.join(";")+"\r\n"+rows.map(r=>cols.
 function fmtCell(c,v){if(typeof v==="number"&&/Kg$/.test(c))return String(v).replace(".",",");if(typeof v==="string"&&/^\d{4}-\d{2}-\d{2}/.test(v))return br(v);return v}
 
 /* ---------------- telas ---------------- */
-const NAV=[["painel","Painel"],["ordens","Ordens"],["pedidos","Pedidos de correção"],["paradas","Paradas"],["dados","Planilha e acesso"]];
+const NAV=[["painel","Painel"],["ordens","Ordens"],["pedidos","Pedidos de correção"],["paradas","Paradas"],["log","Registro de ações"],["dados","Planilha e acesso"]];
 function header(){const ped=pedidos().length;
   return `<div class="hd"><img class="logo" src="logo.png" alt="Ambipar" onerror="this.remove()"><div class="t">Central PCP</div><div class="nav">${NAV.map(([k,n])=>`<button class="${UI.tela==k||(UI.tela=="conf"&&k=="painel")||(UI.tela=="hist"&&k=="painel")?"on":""}" data-tela="${k}">${n}${k=="pedidos"&&ped?` (${ped})`:""}</button>`).join("")}</div>
   <div class="r"><span style="color:#cfd3c6;font-size:12.5px">${P.carregando?"Atualizando…":P.carregadoEm?"Atualizado às "+hh(P.carregadoEm):""}</span><button class="btn" data-act="atualizar">Atualizar</button></div></div>`}
@@ -175,7 +175,12 @@ function tela(){
   switch(UI.tela){
   case "painel":{
     const {all,rows}=linhas();const f=UI.f;const maqs=[...new Set(TRAT().map(t=>t.Maquina))].sort();
-    return header()+`<div class="wrap"><div class="filters">
+    UI.confD??=(()=>{let d=addDays(today(),-1);if(new Date(d+"T12:00").getDay()===0)d=addDays(d,-1);return d})();
+    return header()+`<div class="wrap"><div class="box" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:14px;border-left:5px solid var(--limeD)">
+      <div style="flex:1;min-width:220px"><h4 style="margin:0 0 4px">Conferência da produção</h4><span class="muted">Lista do que foi lançado no dia, para checagem manual (padrão: dia anterior).</span></div>
+      <div class="f"><span class="lbl">Dia</span><input class="in" type="date" id="confD" value="${UI.confD}"></div>
+      <button class="btn" data-act="confExcel">Baixar planilha (Excel)</button><button class="btn sec" data-act="confResumo">Imprimir em 1 folha</button><button class="btn sec" data-act="confImprimir">Imprimir detalhado (hora a hora)</button></div>
+      <div class="filters">
       <div class="f"><span class="lbl">De</span><input class="in" type="date" data-ff="de" value="${f.de}"></div>
       <div class="f"><span class="lbl">Até</span><input class="in" type="date" data-ff="ate" value="${f.ate}"></div>
       <div class="f"><span class="lbl">Máquina</span><select class="sel" data-ff="maq">${opts(maqs,f.maq,"Todas")}</select></div>
@@ -192,7 +197,7 @@ function tela(){
       :`<tr><td colspan="8" class="empty">Nenhum lançamento neste filtro.</td></tr>`}
     </tbody></table></div><p class="muted">Linha vermelha = possível duplicidade (mesma hora lançada duas vezes na ordem, ou mesma máquina, hora e peso). Clique numa linha para conferir.</p></div>`}
   case "ordens":{
-    const g={};TRAT().filter(t=>t.DataProducao>=UI.f.de&&t.DataProducao<=UI.f.ate).forEach(t=>{const o=g[t.Ordem]||(g[t.Ordem]={Ordem:t.Ordem,Data:t.DataProducao,Turno:t.Turno,Maquina:t.Maquina,Material:t.Material,Operador:t.Operador,St:t.StatusOrdem,h:0,kg:0,val:0});o.h++;o.kg+=t.PesoKg;if(t.StatusTratado=="Validado")o.val++;if(t.StatusOrdem=="Encerrada")o.St="Encerrada"});
+    const g={};TRAT().filter(t=>t.DataProducao>=UI.f.de&&t.DataProducao<=UI.f.ate).forEach(t=>{const o=g[t.Ordem]||(g[t.Ordem]={Ordem:t.Ordem,Data:t.DataProducao,Turno:t.Turno,Maquina:t.Maquina,Material:t.Material,Operador:t.Operador,St:t.StatusOrdem,h:0,kg:0,val:0});o.h++;o.kg+=t.PesoKg;if(t.StatusTratado=="Validado")o.val++;if(t.StatusOrdem=="Encerrada")o.St="Encerrada";if(P.stOrd&&P.stOrd[t.Ordem])o.St=P.stOrd[t.Ordem]});
     const L=Object.values(g).sort((a,b)=>b.Ordem.localeCompare(a.Ordem));
     return header()+`<div class="wrap"><div class="filters"><div class="f"><span class="lbl">De</span><input class="in" type="date" data-ff="de" value="${UI.f.de}"></div><div class="f"><span class="lbl">Até</span><input class="in" type="date" data-ff="ate" value="${UI.f.ate}"></div></div>
     <div class="tw"><table><thead><tr><th>Ordem</th><th>Data</th><th>Turno</th><th>Máquina</th><th>Material</th><th>Operador</th><th class="num">Horas</th><th class="num">Total (kg)</th><th>Validadas</th><th>Ordem</th></tr></thead><tbody>
@@ -230,6 +235,16 @@ function tela(){
   case "pedidos":{const L=pedidos().sort((a,b)=>b.HoraInicio.localeCompare(a.HoraInicio));
     return header()+`<div class="wrap"><div class="tw"><table><thead><tr><th>Ordem</th><th>Hora</th><th>Máquina</th><th class="num">Peso (kg)</th><th>Operador</th><th>Pedido do operador</th></tr></thead><tbody>
     ${L.length?L.map(t=>`<tr class="click" data-reg="${esc(t.ID)}"><td><b>${esc(t.Ordem)}</b></td><td>${brc(t.HoraInicio)}–${hh(t.HoraFim)}</td><td>${esc(t.Maquina)}</td><td class="num">${kg(t.PesoKg)}</td><td>${esc(t.Operador)}</td><td style="white-space:normal">${esc(t.PedidoCorrecao)}</td></tr>`).join(""):`<tr><td colspan="6" class="empty">Nenhum pedido pendente.</td></tr>`}</tbody></table></div></div>`}
+  case "log":{const f=UI.f;const bq=(UI.logq||"").toLowerCase();
+    const L=(P.log||[]).filter(r=>!bq||[r.Acao,r.Ordem,r.Operador,r.Aparelho,r.Detalhe].join(" ").toLowerCase().includes(bq)).slice().reverse();
+    const cor=a=>/Cancelou/.test(a)?"var(--crit)":/PCP/.test(a)?"#1b4f9c":/Pediu/.test(a)?"var(--warn)":"inherit";
+    return header()+`<div class="wrap"><div class="filters">
+      <div class="f"><span class="lbl">De</span><input class="in" type="date" data-ff="de" value="${f.de}"></div><div class="f"><span class="lbl">Até</span><input class="in" type="date" data-ff="ate" value="${f.ate}"></div>
+      <div class="f" style="flex:1"><span class="lbl">Buscar (operador, ordem, ação, aparelho)</span><input class="in" id="logq" value="${esc(UI.logq||"")}" placeholder="ex.: Klinger, OPR-000007, Cancelou"></div></div>
+      <div class="box" style="margin-bottom:12px"><span class="muted">Tudo o que os aparelhos e o PCP fazem fica registrado aqui e na aba <b>LOG</b> da planilha: quem fez, quando, em qual aparelho e o quê. Pelo app ninguém apaga lançamentos; a ordem cancelada por engano continua na planilha com o status "Cancelada".</span></div>
+      <div class="tw"><table><thead><tr><th>Quando</th><th>Ação</th><th>Ordem</th><th>Quem</th><th>Aparelho</th><th>Detalhe</th></tr></thead><tbody>
+      ${L.length?L.slice(0,800).map(r=>`<tr><td style="white-space:nowrap">${br(r.DataHora)}</td><td><b style="color:${cor(r.Acao)}">${esc(r.Acao)}</b></td><td>${esc(r.Ordem)}</td><td>${esc(r.Operador)}</td><td>${esc(r.Aparelho)}</td><td style="white-space:normal">${esc(r.Detalhe)}</td></tr>`).join(""):`<tr><td colspan="6" class="empty">Nada registrado neste período.</td></tr>`}
+      </tbody></table></div>${L.length>800?`<p class="muted">Mostrando as 800 mais recentes de ${L.length}. Refine a busca ou veja a aba LOG.</p>`:""}</div>`}
   case "paradas":{const f=UI.f;const L=Object.values(P.par).filter(p=>p.DataProducao>=f.de&&p.DataProducao<=f.ate).sort((a,b)=>b.Inicio.localeCompare(a.Inicio));
     const porMot={};L.forEach(p=>{porMot[p.Motivo]=(porMot[p.Motivo]||0)+p.DuracaoMin});const top=Object.entries(porMot).sort((a,b)=>b[1]-a[1]);
     return header()+`<div class="wrap"><div class="filters"><div class="f"><span class="lbl">De</span><input class="in" type="date" data-ff="de" value="${f.de}"></div><div class="f"><span class="lbl">Até</span><input class="in" type="date" data-ff="ate" value="${f.ate}"></div></div>
@@ -248,7 +263,113 @@ function tela(){
 }
 
 /* ---------------- ações ---------------- */
+/* ---------------- conferência do dia (exportar / imprimir) ---------------- */
+async function dadosConf(){const d=($("#confD")&&$("#confD").value)||UI.confD;UI.confD=d;const j=await api({a:"pcp",de:d,ate:d,q:""});
+  const L=j.trat.filter(t=>String(t.DataProducao).slice(0,10)===d).sort((a,b)=>String(a.Turno).localeCompare(String(b.Turno))||String(a.Maquina).localeCompare(String(b.Maquina))||String(a.HoraInicio).localeCompare(String(b.HoraInicio)));
+  const P2=j.par.filter(x=>String(x.DataProducao).slice(0,10)===d);return {d,L,P:P2}}
+const n2=v=>(Number(v)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const hm=v=>String(v||"").slice(11,16);
+const P_nome=()=>P.cfg.nome||"";
+/* soma kg e quantidade por acondicionamento (FARDO, BAG, PALETE, SACARIA…) */
+function porAcond(L){const a={};L.forEach(t=>{const k=String(t.Acondicionamento||"—");const o=a[k]||(a[k]={q:0,kg:0,h:0});o.q+=Number(t.Quantidade)||1;o.kg+=Number(t.PesoKg)||0;o.h++});return a}
+const txtAcond=a=>Object.keys(a).sort().map(k=>a[k].q.toLocaleString("pt-BR")+" "+k).join(" · ");
+function baixar(nome,conteudo,tipo){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([conteudo],{type:tipo+";charset=utf-8"}));a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
 const ACT={
+  async confExcel(){try{toast("Gerando planilha…");const {d,L,P}=await dadosConf();if(!L.length&&!P.length){toast("Nenhum lançamento em "+br(d)+".");return}
+    const cols=["Data","Turno","Ordem","Máquina","Material","Hora início","Hora fim","Operador","Acondicionamento","Quantidade","Peso por unidade (kg)","Peso total (kg)","Status PCP","Pedido do operador","Conferido (S/N)","Peso conferido (kg)","Obs. da conferência"];
+    const rows=L.map(t=>({"Data":br(d),"Turno":t.Turno,"Ordem":t.Ordem,"Máquina":t.Maquina,"Material":t.Material,"Hora início":hm(t.HoraInicio),"Hora fim":hm(t.HoraFim),"Operador":t.Operador,"Acondicionamento":t.Acondicionamento,"Quantidade":t.Quantidade,
+      "Peso por unidade (kg)":t.PesoUnitKg?n2(t.PesoUnitKg):"","Peso total (kg)":n2(t.PesoKg),"Status PCP":t.StatusPCP,"Pedido do operador":t.PedidoCorrecao||"","Conferido (S/N)":"","Peso conferido (kg)":"","Obs. da conferência":""}));
+    const ACs=Object.keys(porAcond(L)).sort();const gm={};L.forEach(t=>(gm[t.Maquina]=gm[t.Maquina]||[]).push(t));
+    const linhaRes=(nome,ls)=>{const a=porAcond(ls);return [csvCell(nome),ls.length,n2(ls.reduce((s,t)=>s+(Number(t.PesoKg)||0),0))].concat(ACs.map(k=>a[k]?a[k].q:0)).join(";")+";;"};
+    let out=csv(rows,cols);
+    out+="\r\nResumo por máquina\r\nMáquina;Horas;Peso total (kg);"+ACs.map(k=>"Qtd "+k).join(";")+";Peso conferido (kg);Qtd conferida\r\n"+Object.keys(gm).sort().map(k=>linhaRes(k,gm[k])).join("\r\n")+"\r\n"+linhaRes("TOTAL DO DIA",L)+"\r\n";
+    const aT=porAcond(L);out+="\r\nTotal por acondicionamento\r\nAcondicionamento;Quantidade;Peso total (kg);Horas;Qtd conferida;Peso conferido (kg)\r\n"+ACs.map(k=>[csvCell(k),aT[k].q,n2(aT[k].kg),aT[k].h,"",""].join(";")).join("\r\n")+"\r\n";
+    if(P.length)out+="\r\nParadas\r\nMáquina;Motivo;Início;Fim;Minutos;Operador;Observação\r\n"+P.map(x=>[x.Maquina,x.Motivo,hm(x.Inicio),hm(x.Fim),x.DuracaoMin,x.Operador,x.Observacao||""].map(csvCell).join(";")).join("\r\n")+"\r\n";
+    baixar("Conferencia_Producao_"+d+".csv",out,"text/csv");toast("Planilha de "+br(d)+" baixada ("+L.length+" hora(s)).")}catch(e){toast("Erro: "+e.message)}},
+  async confResumo(){const w=window.open("","_blank");if(!w){toast("Libere pop-ups para imprimir.");return}w.document.write("<p style='font-family:Arial'>Carregando…</p>");
+    try{const {d,L,P}=await dadosConf();const tot=L.reduce((s,t)=>s+(Number(t.PesoKg)||0),0);const aT=porAcond(L);const ACs=Object.keys(aT).sort((x,y)=>aT[y].kg-aT[x].kg);
+      const g={};L.forEach(t=>{const k=t.Maquina+"|"+t.Turno;(g[k]=g[k]||[]).push(t)});
+      const ks=Object.keys(g).sort((a,b)=>a.split("|")[0].localeCompare(b.split("|")[0])||a.split("|")[1].localeCompare(b.split("|")[1]));
+      const ordTu={};L.forEach(t=>ordTu[t.Ordem]=t.Turno);const pm={};
+      P.forEach(x=>{let k=x.Maquina+"|"+(ordTu[x.Ordem]||"");if(!g[k])k=Object.keys(g).sort().find(z=>z.split("|")[0]===x.Maquina)||k;pm[k]=(pm[k]||0)+(Number(x.DuracaoMin)||0)});const parT=P.reduce((s,x)=>s+(Number(x.DuracaoMin)||0),0);
+      const nMaq=new Set(L.map(t=>t.Maquina)).size,nOrd=new Set(L.map(t=>t.Ordem)).size,nCorr=L.filter(t=>t.StatusPCP==="Corrigido").length,nVal=L.filter(t=>t.StatusPCP==="Validado").length;
+      const dt=new Date(d+"T12:00");const dia=dt.toLocaleDateString("pt-BR",{weekday:"long"});
+      const logo=new URL("logo.png",location.href).href;const q=v=>Number(v).toLocaleString("pt-BR");
+      const linhas=ks.map((k,i)=>{const ls=g[k];const [m,tu]=k.split("|");const a=porAcond(ls);const kg=ls.reduce((s,t)=>s+(Number(t.PesoKg)||0),0);
+        const ords=[...new Set(ls.map(t=>t.Ordem.replace("OPR-","")))].join(", ");const ops=[...new Set(ls.map(t=>t.Operador))].join(", ");const corr=ls.filter(t=>t.StatusPCP==="Corrigido").length;
+        const mats=[...new Set(ls.map(t=>t.Material))].join(" · ");
+        return `<tr${i%2?' class="z"':""}><td class="ck"><span class="box"></span></td><td><div class="maq">${esc(m)}</div><div class="sub">${esc(mats)}</div></td><td><span class="tu tu${tu==="2º"?2:1}">${esc(tu)}</span></td>
+          <td><div>${esc(ops)}</div><div class="sub">OPR ${esc(ords)}</div></td><td class="n">${ls.length} h</td>
+          ${ACs.map(x=>a[x]?`<td class="n ac"><b>${q(a[x].q)}</b><div class="sub">${n2(a[x].kg)} kg</div></td>`:`<td class="n ac vazio">—</td>`).join("")}
+          <td class="n kg"><b>${n2(kg)}</b>${corr?`<div class="tagc">✎ ${corr} corrigida(s)</div>`:""}</td><td class="n">${pm[k]?pm[k]+" min":"—"}</td>
+          <td class="cf"></td><td class="cf"></td><td class="cf obs"></td></tr>`}).join("");
+      w.document.open();w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Conferência da produção ${br(d)}</title><style>
+        @page{size:A4 landscape;margin:7mm}
+        *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        body{font-family:"Segoe UI",Arial,sans-serif;color:#1c1e1a;margin:0;font-size:11px;background:#fff}
+        #pg{width:1060px;margin:0 auto}
+        .hd{background:#1c1e1a;color:#fff;border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:18px;border-bottom:5px solid #cdff00}
+        .hd img{height:26px}.hd .t{flex:1}.hd h1{margin:0;font-size:19px;color:#cdff00;letter-spacing:.2px}.hd .s{color:#cfd3c6;font-size:11px;margin-top:2px}
+        .hd .dia{text-align:right}.hd .dia b{display:block;font-size:24px;color:#fff;line-height:1}.hd .dia span{color:#cdff00;text-transform:capitalize;font-size:12px}
+        .kpis{display:flex;gap:8px;margin:10px 0}.k{flex:1;border:1px solid #d9dbd3;border-radius:9px;padding:7px 10px;background:#fafbf7;min-width:0}
+        .k .l{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:#6b6f63;font-weight:700}.k .v{font-size:20px;font-weight:800;margin-top:2px;white-space:nowrap}.k .v small{font-size:11px;font-weight:600;color:#6b6f63}
+        .k .x{font-size:10.5px;color:#4a4e44;margin-top:1px}
+        .k.main{background:#1c1e1a;border-color:#1c1e1a;color:#fff;flex:1.5}.k.main .l{color:#cdff00}.k.main .x{color:#cfd3c6}
+        .k.ac{border-top:4px solid #5f7a00}.k.conf{background:#f4ffd0;border:1.5px dashed #5f7a00}.k.conf .v{font-size:13px;color:#6b6f63;font-weight:600;padding-top:6px}
+        table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #c9ccc2;border-radius:9px;overflow:hidden}
+        th{background:#1c1e1a;color:#fff;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;padding:6px 6px;text-align:left;font-weight:700}
+        th.cfh{background:#5f7a00;color:#fff}th.ach{background:#3a3d35}
+        td{padding:5px 6px;border-top:1px solid #e3e5dd;vertical-align:middle}tr.z td{background:#f7f8f4}
+        .n{text-align:right;white-space:nowrap}.sub{font-size:9.5px;color:#6b6f63;margin-top:1px}.maq{font-weight:800;font-size:12px}
+        .ck{width:22px;text-align:center}.box{display:inline-block;width:13px;height:13px;border:1.5px solid #1c1e1a;border-radius:3px}
+        .tu{display:inline-block;border-radius:10px;padding:1px 8px;font-weight:700;font-size:10px}.tu1{background:#e8f5b8;color:#3d4f00}.tu2{background:#dbe8fb;color:#1b4f9c}
+        .ac b{font-size:12.5px}.vazio{color:#b4b8ad}.kg b{font-size:13px}.tagc{font-size:9px;color:#9c5d00;font-weight:700;margin-top:1px}
+        .cf{background:#fbfff0!important;border-left:1px dashed #b9c98a;min-width:70px}.obs{min-width:110px}
+        tfoot td{background:#eef0e8!important;font-weight:800;border-top:2px solid #1c1e1a;padding:7px 6px}tfoot .sub{font-weight:600}
+        .ft{display:flex;gap:28px;margin-top:20px;align-items:flex-end}.ft .a{flex:1;border-top:1.5px solid #1c1e1a;padding-top:4px;font-size:10.5px;color:#4a4e44}
+        .leg{font-size:9.5px;color:#6b6f63;margin-top:8px}
+        .np{margin:8px 0}@media print{.np{display:none}}</style></head><body><div id="pg">
+        <div class="np"><button onclick="print()" style="font-size:14px;padding:7px 16px;border-radius:8px;border:0;background:#cdff00;font-weight:700;cursor:pointer">Imprimir</button></div>
+        <div class="hd"><img src="${logo}" onerror="this.remove()"><div class="t"><h1>Conferência da produção</h1><div class="s">Checagem do que foi lançado pela produção · gerado em ${br(nowIso().slice(0,16))} por ${esc(P_nome())}</div></div>
+          <div class="dia"><b>${br(d)}</b><span>${esc(dia)}</span></div></div>
+        <div class="kpis">
+          <div class="k main"><div class="l">Total produzido</div><div class="v">${n2(tot)} <small style="color:#cfd3c6">kg</small></div><div class="x">${L.length} hora(s) · ${nMaq} máquina(s) · ${nOrd} ordem(ns)</div></div>
+          ${ACs.map(x=>`<div class="k ac"><div class="l">${esc(x)}</div><div class="v">${q(aT[x].q)} <small>un.</small></div><div class="x">${n2(aT[x].kg)} kg</div></div>`).join("")}
+          <div class="k"><div class="l">Paradas</div><div class="v">${parT} <small>min</small></div><div class="x">${P.length} ocorrência(s)</div></div>
+          <div class="k"><div class="l">Situação no PCP</div><div class="v" style="font-size:14px;padding-top:4px">${nVal} ✓ · ${nCorr} ✎</div><div class="x">validadas · corrigidas</div></div>
+          <div class="k conf"><div class="l" style="color:#3d4f00">Total conferido</div><div class="v">________ kg</div></div></div>
+        ${L.length?`<table><thead><tr><th></th><th>Máquina / material</th><th>Turno</th><th>Operador / ordem</th><th class="n">Horas</th>${ACs.map(x=>`<th class="n ach">${esc(x)}</th>`).join("")}<th class="n">Peso total (kg)</th><th class="n">Paradas</th><th class="cfh">Qtd conferida</th><th class="cfh">Peso conferido</th><th class="cfh">Observação</th></tr></thead><tbody>${linhas}</tbody>
+          <tfoot><tr><td></td><td>TOTAL DO DIA</td><td></td><td></td><td class="n">${L.length} h</td>${ACs.map(x=>`<td class="n">${q(aT[x].q)}<div class="sub">${n2(aT[x].kg)} kg</div></td>`).join("")}<td class="n">${n2(tot)}</td><td class="n">${parT?parT+" min":"—"}</td><td class="cf"></td><td class="cf"></td><td class="cf"></td></tr></tfoot></table>`:`<p style="font-size:14px;padding:20px;border:1px dashed #999;border-radius:9px">Nenhum lançamento neste dia.</p>`}
+        <div class="leg">☐ marque cada linha conferida · Quantidade em unidades de cada acondicionamento (as colunas mudam conforme o que foi produzido) · Pesos da base tratada (já com as correções do PCP) · ✎ = hora corrigida pelo PCP</div>
+        <div class="ft"><div class="a">Conferido por</div><div class="a">Data / hora</div><div class="a">Visto do PCP</div></div></div>
+        <script>
+          function caber(){const pg=document.getElementById("pg");pg.style.zoom=1;const H=720;const h=pg.getBoundingClientRect().height;const s=Math.min(1,H/h);pg.style.zoom=s}
+          addEventListener("beforeprint",caber);setTimeout(()=>{caber();print()},700)<\/script></body></html>`);w.document.close()}
+    catch(e){w.close();toast("Erro: "+e.message)}},
+  async confImprimir(){const w=window.open("","_blank");if(!w){toast("Libere pop-ups para imprimir.");return}w.document.write("<p style='font-family:Arial'>Carregando…</p>");
+    try{const {d,L,P}=await dadosConf();const g={};L.forEach(t=>(g[t.Maquina]=g[t.Maquina]||[]).push(t));const tot=L.reduce((s,t)=>s+(Number(t.PesoKg)||0),0);
+      const logo=new URL("logo.png",location.href).href;
+      const blocos=Object.keys(g).sort().map(m=>{const ls=g[m];const kgm=ls.reduce((s,t)=>s+(Number(t.PesoKg)||0),0);
+        return `<h3>${esc(m)} <span>· ${ls.length} hora(s) · <b>${n2(kgm)} kg</b> · ${esc(txtAcond(porAcond(ls)))}</span></h3><table><thead><tr><th>✓</th><th>Turno</th><th>Ordem</th><th>Hora</th><th>Operador</th><th>Material</th><th>Acond.</th><th class=n>Qtd</th><th class=n>Peso un.</th><th class=n>Peso total</th><th>Peso conferido</th><th>Obs.</th></tr></thead><tbody>${ls.map(t=>`<tr><td class=ck>☐</td><td>${esc(t.Turno)}</td><td>${esc(t.Ordem)}</td><td>${hm(t.HoraInicio)}–${hm(t.HoraFim)}</td><td>${esc(t.Operador)}</td><td>${esc(t.Material)}</td><td>${esc(t.Acondicionamento)}</td><td class=n>${esc(t.Quantidade??"")}</td><td class=n>${t.PesoUnitKg?n2(t.PesoUnitKg):""}</td><td class=n><b>${n2(t.PesoKg)}</b>${t.StatusPCP!=="Em conferência"?`<br><small>${esc(t.StatusPCP)}</small>`:""}</td><td class=w></td><td class=w></td></tr>`).join("")}</tbody></table>`}).join("");
+      const par=P.length?`<h3>Paradas</h3><table><thead><tr><th>Máquina</th><th>Motivo</th><th>Início</th><th>Fim</th><th class=n>Min</th><th>Operador</th><th>Obs.</th></tr></thead><tbody>${P.map(x=>`<tr><td>${esc(x.Maquina)}</td><td>${esc(x.Motivo)}</td><td>${hm(x.Inicio)}</td><td>${hm(x.Fim)}</td><td class=n>${esc(x.DuracaoMin)}</td><td>${esc(x.Operador)}</td><td>${esc(x.Observacao||"")}</td></tr>`).join("")}</tbody></table>`:"";
+      w.document.open();w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Conferência ${br(d)}</title><style>
+        body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:18px}.top{display:flex;align-items:center;gap:14px;border-bottom:3px solid #111;padding-bottom:8px}
+        .top img{height:26px;filter:invert(1)}h1{font-size:18px;margin:0}h3{font-size:13px;margin:16px 0 4px}h3 span{font-weight:400;color:#444}
+        table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:4px 5px;text-align:left;vertical-align:top}th{background:#eee;font-size:10px}
+        .n{text-align:right}.ck{font-size:15px;text-align:center;width:18px}.w{min-width:70px}tr{page-break-inside:avoid}
+        .res{margin-top:10px;font-size:13px}.ass{display:flex;gap:40px;margin-top:36px}.ass div{flex:1;border-top:1px solid #111;padding-top:4px}
+        @media print{.np{display:none}}</style></head><body>
+        <div class="np" style="margin-bottom:10px"><button onclick="print()" style="font-size:14px;padding:6px 14px">Imprimir</button></div>
+        <div class="top"><img src="${logo}" onerror="this.remove()"><div><h1>Conferência da produção — ${br(d)}</h1><div>${L.length} hora(s) lançada(s) · <b>${n2(tot)} kg</b> · ${esc(txtAcond(porAcond(L)))} · gerado em ${br(nowIso().slice(0,16))} por ${esc(P_nome())}</div></div></div>
+        ${L.length?blocos:"<p>Nenhum lançamento neste dia.</p>"}${par}
+        <h3>Totais do dia</h3><table style="width:auto;min-width:60%"><thead><tr><th>Acondicionamento</th><th class=n>Quantidade</th><th class=n>Peso total (kg)</th><th class=n>Horas</th><th>Qtd conferida</th><th>Peso conferido (kg)</th></tr></thead><tbody>
+          ${(()=>{const a=porAcond(L);return Object.keys(a).sort().map(k=>`<tr><td>${esc(k)}</td><td class=n><b>${a[k].q.toLocaleString("pt-BR")}</b></td><td class=n>${n2(a[k].kg)}</td><td class=n>${a[k].h}</td><td class=w></td><td class=w></td></tr>`).join("")})()}
+          <tr><td><b>TOTAL</b></td><td class=n>—</td><td class=n><b>${n2(tot)}</b></td><td class=n><b>${L.length}</b></td><td class=w></td><td class=w></td></tr></tbody></table>
+        <h3>Por máquina</h3><table style="width:auto;min-width:60%"><thead><tr><th>Máquina</th><th class=n>Horas</th><th class=n>Peso total (kg)</th><th>Quantidade</th><th>Peso conferido (kg)</th></tr></thead><tbody>
+          ${Object.keys(g).sort().map(m=>`<tr><td>${esc(m)}</td><td class=n>${g[m].length}</td><td class=n>${n2(g[m].reduce((s,t)=>s+(Number(t.PesoKg)||0),0))}</td><td>${esc(txtAcond(porAcond(g[m])))}</td><td class=w></td></tr>`).join("")}</tbody></table>
+        <div class="ass"><div>Conferido por</div><div>Data / hora</div><div>Visto do PCP</div></div>
+        <script>setTimeout(()=>print(),700)<\/script></body></html>`);w.document.close()}
+    catch(e){w.close();toast("Erro: "+e.message)}},
   async entrarPcp(){const n=$("#nome").value.trim(),k=$("#senha").value.trim(),u=$("#apiUrl").value.trim();if(!n||!k||!u){toast("Preencha nome, senha e endereço.");return}
     P.cfg.nome=n;P.cfg.senha=k;P.cfg.api=u;P.erro="";salvar();await carregar(false)},
   sairPcp(){P.cfg.senha="";salvar();P.trat={};P.bruta={}},
@@ -279,6 +400,8 @@ function campo(e){const t=e.target;
   let re=e.type==="change";
   if(t.dataset.c!==undefined)UI.cf[t.dataset.c]=t.value;
   else if(t.dataset.ff!==undefined){UI.f[t.dataset.ff]=t.value;re=true;if(t.dataset.ff==="de"||t.dataset.ff==="ate"){if(e.type==="change")carregar(true)}}
+  else if(t.id==="confD"){UI.confD=t.value}
+  else if(t.id==="logq"){UI.logq=t.value;clearTimeout(window._lq);window._lq=setTimeout(()=>{suave();setTimeout(()=>{const x=$("#logq");if(x){x.focus();x.setSelectionRange(x.value.length,x.value.length)}},0)},350)}
   else if(t.id==="fordem"){UI.f.ordem=t.value;clearTimeout(window._bq);window._bq=setTimeout(()=>carregar(true),600)}
   else return;
   re?render():suave()}
