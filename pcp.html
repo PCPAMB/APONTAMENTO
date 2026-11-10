@@ -197,15 +197,16 @@ function tela(){
       :`<tr><td colspan="8" class="empty">Nenhum lançamento neste filtro.</td></tr>`}
     </tbody></table></div><p class="muted">Linha vermelha = possível duplicidade (mesma hora lançada duas vezes na ordem, ou mesma máquina, hora e peso). Clique numa linha para conferir.</p></div>`}
   case "ordens":{
-    const g={};TRAT().filter(t=>t.DataProducao>=UI.f.de&&t.DataProducao<=UI.f.ate).forEach(t=>{const o=g[t.Ordem]||(g[t.Ordem]={Ordem:t.Ordem,Data:t.DataProducao,Turno:t.Turno,Maquina:t.Maquina,Material:t.Material,Operador:t.Operador,St:t.StatusOrdem,h:0,kg:0,val:0});o.h++;o.kg+=t.PesoKg;if(t.StatusTratado=="Validado")o.val++;if(t.StatusOrdem=="Encerrada")o.St="Encerrada";if(P.stOrd&&P.stOrd[t.Ordem])o.St=P.stOrd[t.Ordem]});
+    const g={};(P.ordens||[]).forEach(o=>{const d=String(o.DataProducao||"").slice(0,10);if(d<UI.f.de||d>UI.f.ate)return;g[o.Ordem]={Ordem:String(o.Ordem),Data:d,Turno:o.Turno,Maquina:o.Maquina,Material:o.Material,Operador:o.Operador,St:o.Status||"Aberta",h:0,kg:0,val:0}});
+    TRAT().filter(t=>t.DataProducao>=UI.f.de&&t.DataProducao<=UI.f.ate).forEach(t=>{const o=g[t.Ordem]||(g[t.Ordem]={Ordem:t.Ordem,Data:t.DataProducao,Turno:t.Turno,Maquina:t.Maquina,Material:t.Material,Operador:t.Operador,St:t.StatusOrdem,h:0,kg:0,val:0});o.h++;o.kg+=t.PesoKg;if(t.StatusTratado=="Validado")o.val++;if(t.StatusOrdem=="Encerrada")o.St="Encerrada";if(P.stOrd&&P.stOrd[t.Ordem])o.St=P.stOrd[t.Ordem]});
     const L=Object.values(g).sort((a,b)=>b.Ordem.localeCompare(a.Ordem));
     return header()+`<div class="wrap"><div class="filters"><div class="f"><span class="lbl">De</span><input class="in" type="date" data-ff="de" value="${UI.f.de}"></div><div class="f"><span class="lbl">Até</span><input class="in" type="date" data-ff="ate" value="${UI.f.ate}"></div></div>
     <div class="tw"><table><thead><tr><th>Ordem</th><th>Data</th><th>Turno</th><th>Máquina</th><th>Material</th><th>Operador</th><th class="num">Horas</th><th class="num">Total (kg)</th><th>Validadas</th><th>Ordem</th></tr></thead><tbody>
-    ${L.length?L.map(o=>`<tr class="click" data-ordem="${esc(o.Ordem)}"><td><b>${esc(o.Ordem)}</b></td><td>${br(o.Data)}</td><td>${esc(o.Turno)}</td><td>${esc(o.Maquina)}</td><td>${esc(o.Material)}</td><td>${esc(o.Operador)}</td><td class="num">${o.h}</td><td class="num"><b>${kg(o.kg)}</b></td><td>${o.val}/${o.h}</td><td>${o.St=="Encerrada"?chip("Encerrada"):`<span class="chip Aberta">Aberta</span>`}</td></tr>`).join(""):`<tr><td colspan="10" class="empty">Nenhuma ordem no período.</td></tr>`}
-    </tbody></table></div><p class="muted">"Aberta" = o operador ainda não encerrou (ou a exportação do encerramento ainda não chegou). Clique numa ordem para ver as horas.</p></div>`}
+    ${L.length?L.map(o=>`<tr class="click" data-ordem="${esc(o.Ordem)}"><td><b>${esc(o.Ordem)}</b></td><td>${br(o.Data)}</td><td>${esc(o.Turno)}</td><td>${esc(o.Maquina)}</td><td>${esc(o.Material)}</td><td>${esc(o.Operador)}</td><td class="num">${o.h}</td><td class="num"><b>${kg(o.kg)}</b></td><td>${o.val}/${o.h}</td><td>${o.St=="Encerrada"?chip("Encerrada"):o.St=="Cancelada"?`<span class="chip" style="background:var(--errL);color:#9b1c1c">Cancelada</span>`:`<span class="chip Aberta">Aberta</span>`}${!o.h&&o.St=="Aberta"?`<br><span class="muted" style="font-size:11.5px">sem horas lançadas</span>`:""}</td></tr>`).join(""):`<tr><td colspan="10" class="empty">Nenhuma ordem no período.</td></tr>`}
+    </tbody></table></div><p class="muted">"Aberta" = o operador ainda não encerrou. "Sem horas lançadas" = a ordem foi aberta mas nenhuma hora chegou ainda. Clique numa ordem para ver as horas.</p></div>`}
   case "conf":{
     const r=P.trat[UI.reg];if(!r){UI.tela="painel";return tela()}const o=P.bruta[r.ID];const c=UI.cf;
-    c.peso??=String(r.PesoKg).replace(".",",");c.qtd??=String(r.Quantidade??"");c.maq??=r.Maquina;c.mat??=r.Material;c.turno??=r.Turno;c.acond??=r.Acondicionamento;c.motivo??="";
+    c.peso??=String(r.PesoKg).replace(".",",");c.qtd??=String(r.Quantidade??"");c.maq??=r.Maquina;c.mat??=r.Material;c.turno??=r.Turno;c.acond??=r.Acondicionamento;c.eq??=String(r.Equipes||"");c.motivo??="";
     const ch=(a,b)=>String(a)!=String(b)?" chg":"";const nh=P.hist.filter(h=>h.ID===r.ID).length;
     const cadP=P.cfg.cad||CAD;const maqs=[...new Set([...cadP.maq,...TRAT().map(t=>t.Maquina)])].sort(),mats=[...new Set([...cadP.mat,...TRAT().map(t=>t.Material)])].sort(),acs=[...new Set([...(cadP.acond||ACOND),r.Acondicionamento])];
     return header()+`<div class="wrap"><p><button class="btn sec" data-tela="painel">← Voltar ao painel</button> &nbsp; <b style="font-size:18px">Conferência · ${esc(r.Ordem)} · ${brc(r.HoraInicio)}–${hh(r.HoraFim)}</b></p>
@@ -214,7 +215,7 @@ function tela(){
       <span class="k">Peso</span><b>${kg(o.PesoKg)} kg</b><span class="k">Quantidade</span><span>${esc(o.Quantidade)} ${esc(o.Acondicionamento)}</span>
       <span class="k">Turno</span><span>${esc(o.Turno)}</span><span class="k">Hora</span><span>${br(o.HoraInicio)} – ${hh(o.HoraFim)} (${o.DuracaoMin} min)</span>
       <span class="k">Operador</span><span>${esc(o.Operador)}</span><span class="k">Lançado em</span><span>${br(o.LancadoEm)} · aparelho ${esc(o.Aparelho)}</span>
-      <span class="k">Observação</span><span>${esc(o.Observacao)||"—"}</span><span class="k">Arquivo</span><span class="muted">${esc(o.Arquivo)}</span></div>
+      <span class="k">Observação</span><span>${esc(o.Observacao)||"—"}</span><span class="k">Equipe</span><span>${esc(o.Equipes||"")||"—"}</span><span class="k">Arquivo</span><span class="muted">${esc(o.Arquivo)}</span></div>
       ${o.PedidoCorrecao?`<div class="warn">Pedido do operador: ${esc(o.PedidoCorrecao)}</div>`:""}
       <p><button class="btn sec" data-tela="hist">Ver histórico (${nh})</button></p></div>
     <div class="box"><h4>Tratado · BASE TRATADA <small>editável</small></h4><div class="g2">
@@ -224,6 +225,7 @@ function tela(){
       <div><span class="lbl">Material</span><select class="sel${ch(c.mat,r.Material)}" data-c="mat">${opts(mats,c.mat)}</select></div>
       <div><span class="lbl">Turno</span><select class="sel${ch(c.turno,r.Turno)}" data-c="turno">${opts(["1º","2º"],c.turno)}</select></div>
       <div><span class="lbl">Acondicionamento</span><select class="sel${ch(c.acond,r.Acondicionamento)}" data-c="acond">${opts(acs,c.acond)}</select></div></div>
+      <div style="margin-top:8px"><span class="lbl">Equipe (nomes separados por vírgula)</span><input class="in${ch(c.eq,String(r.Equipes||""))}" data-c="eq" value="${esc(c.eq)}" style="width:100%"></div>
       <span class="lbl">Motivo da correção (obrigatório para salvar)</span><textarea class="in" data-c="motivo" placeholder="Ex.: erro de digitação, confirmado na balança">${esc(c.motivo)}</textarea>
       <p class="muted">Borda verde = campo alterado. Cada alteração vira uma linha no HISTÓRICO. <b>Status: ${esc(r.StatusTratado)}</b>${r.ValidadoPor?` · validado por ${esc(r.ValidadoPor)} em ${br(r.DataValidacao)}`:""}</p>
       <div class="g2"><button class="btn sec big" data-act="salvarCorr">Salvar correção</button><button class="btn big" data-act="validar"${r.StatusTratado=="Validado"?" disabled":""}>Validar</button></div></div></div></div>`}
@@ -253,7 +255,13 @@ function tela(){
     <div class="tw"><table><thead><tr><th>Início</th><th>Fim</th><th class="num">Min</th><th>Máquina</th><th>Motivo</th><th>Tipo</th><th>Ordem</th><th>Operador</th><th>Observação</th></tr></thead><tbody>
     ${L.length?L.map(p=>`<tr><td>${brc(p.Inicio)}</td><td>${hh(p.Fim)}</td><td class="num">${p.DuracaoMin}</td><td>${esc(p.Maquina)}</td><td>${esc(p.Motivo)}</td><td>${esc(p.Tipo)}</td><td>${esc(p.Ordem)}</td><td>${esc(p.Operador)}</td><td style="white-space:normal">${esc(p.Observacao)}</td></tr>`).join(""):`<tr><td colspan="9" class="empty">Nenhuma parada.</td></tr>`}</tbody></table></div></div>`}
   case "dados":{
-    return header()+`<div class="wrap"><div class="cards">
+    UI.dxDe??=(()=>{let d=addDays(today(),-1);if(new Date(d+"T12:00").getDay()===0)d=addDays(d,-1);return d})();UI.dxAte??=UI.dxDe;
+    return header()+`<div class="wrap"><div class="box" style="margin-bottom:14px;border-left:5px solid var(--limeD)"><h4 style="margin:0 0 4px">Planilha diária da produção (hora a hora)</h4>
+      <p class="muted" style="margin:0 0 10px">Excel no layout da planilha da empresa: ID (nº da ordem), Data, Máquina, Material, Classificação, Qualificação, Acondicionado, Estado, Hora início/fim, Peso, Quantidade, Total processado, Duração, Prod. kg/h, Equipes, Turno e Descrição completa — uma linha por hora lançada, já com as correções do PCP.</p>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap"><div class="f"><span class="lbl">De</span><input class="in" type="date" id="dxDe" value="${UI.dxDe}"></div><div class="f"><span class="lbl">Até</span><input class="in" type="date" id="dxAte" value="${UI.dxAte}"></div>
+      <button class="btn" data-act="diariaExcel">Baixar planilha (Excel)</button></div>
+      <p class="muted" style="margin:10px 0 0;font-size:12px">A divisão do material (Material · Classificação · Qualificação · Estado) e o nome do acondicionamento (BAG → BAGS, PALETE → PALLETS) vêm das abas CAD_Materiais e CAD_Acond e podem ser ajustados lá.</p></div>
+    <div class="cards">
     <div class="box"><h4>Planilha Google</h4><p>Todas as abas: ORDENS, BASE_BRUTA (como o operador lançou, nunca alterada), BASE_TRATADA (corrigida), HISTORICO, PARADAS e cadastros.</p>
       ${P.planilha?`<p><a class="btn" href="${esc(P.planilha)}" target="_blank" rel="noopener">Abrir a planilha</a></p>`:""}<p class="muted">Para análises no Excel: na planilha, Arquivo → Fazer download → Microsoft Excel.</p></div>
     <div class="box"><h4>Cadastros e operadores</h4><p>Edite direto na planilha, nas abas CAD_Usuarios (nome, turno, PIN), CAD_Maquinas, CAD_Materiais, CAD_Motivos e CAD_Acond. Os aparelhos atualizam sozinhos.</p></div>
@@ -273,8 +281,52 @@ const P_nome=()=>P.cfg.nome||"";
 /* soma kg e quantidade por acondicionamento (FARDO, BAG, PALETE, SACARIA…) */
 function porAcond(L){const a={};L.forEach(t=>{const k=String(t.Acondicionamento||"—");const o=a[k]||(a[k]={q:0,kg:0,h:0});o.q+=Number(t.Quantidade)||1;o.kg+=Number(t.PesoKg)||0;o.h++});return a}
 const txtAcond=a=>Object.keys(a).sort().map(k=>a[k].q.toLocaleString("pt-BR")+" "+k).join(" · ");
-function baixar(nome,conteudo,tipo){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([conteudo],{type:tipo+";charset=utf-8"}));a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+function baixar(nome,conteudo,tipo){const a=document.createElement("a");a.href=URL.createObjectURL(conteudo instanceof Blob?conteudo:new Blob([conteudo],{type:tipo+";charset=utf-8"}));a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+/* ---------------- Excel (.xlsx) sem biblioteca: zip "store" + XML ---------------- */
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+function zip(files){const enc=new TextEncoder();const parts=[],cent=[];let off=0;
+  const u16=v=>[v&255,(v>>8)&255],u32=v=>[v&255,(v>>8)&255,(v>>16)&255,(v>>>24)&255];
+  files.forEach(([name,txt])=>{const nb=enc.encode(name),db=enc.encode(txt),cr=crc32(db);
+    const lh=new Uint8Array([0x50,0x4b,3,4,...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(cr),...u32(db.length),...u32(db.length),...u16(nb.length),...u16(0)]);
+    parts.push(lh,nb,db);cent.push(new Uint8Array([0x50,0x4b,1,2,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(cr),...u32(db.length),...u32(db.length),...u16(nb.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nb);
+    off+=lh.length+nb.length+db.length});
+  const cs=cent.reduce((s,a)=>s+a.length,0);const end=new Uint8Array([0x50,0x4b,5,6,0,0,0,0,...u16(files.length),...u16(files.length),...u32(cs),...u32(off),0,0]);
+  return new Blob([...parts,...cent,end],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})}
+const xesc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
+function colL(i){let s="";i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
+/* cols: [{h, w, t:"s"|"d"|"tm"|"n0"|"n1"|"i"}]; rows: arrays de valores (d = "aaaa-mm-dd", tm = "hh:mm") */
+function xlsx(nomeAba,cols,rows){const st={s:6,d:2,tm:3,n0:4,i:4,n1:7,h1:5};
+  const serD=s=>{const[y,m,d]=s.split("-").map(Number);return (Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/864e5};
+  const serT=s=>{const[h,m]=s.split(":").map(Number);return (h*60+m)/1440};
+  const cell=(r,c,v,t)=>{const ref=colL(c)+r,sx=st[t]||6;if(v===""||v==null)return `<c r="${ref}" s="${sx}"/>`;
+    if(t==="d")return `<c r="${ref}" s="${sx}"><v>${serD(v)}</v></c>`;if(t==="tm")return `<c r="${ref}" s="${sx}"><v>${serT(v)}</v></c>`;
+    if(t==="n0"||t==="n1"||t==="i"||t==="h1")return `<c r="${ref}" s="${sx}"><v>${Number(v)}</v></c>`;
+    return `<c r="${ref}" s="${sx}" t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`};
+  const head=`<row r="1" ht="20" customHeight="1">${cols.map((c,i)=>`<c r="${colL(i)}1" s="1" t="inlineStr"><is><t>${xesc(c.h)}</t></is></c>`).join("")}</row>`;
+  const body=rows.map((r,ri)=>`<row r="${ri+2}">${r.map((v,ci)=>cell(ri+2,ci,v,cols[ci].t)).join("")}</row>`).join("");
+  const last=colL(cols.length-1)+(rows.length+1);
+  const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols.map((c,i)=>`<col min="${i+1}" max="${i+1}" width="${c.w||12}" customWidth="1"/>`).join("")}</cols><sheetData>${head}${body}</sheetData><autoFilter ref="A1:${last}"/></worksheet>`;
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="5"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/><numFmt numFmtId="165" formatCode="hh:mm:ss"/><numFmt numFmtId="166" formatCode="#,##0"/><numFmt numFmtId="167" formatCode="0.0"/><numFmt numFmtId="168" formatCode="#,##0.0"/></numFmts><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFCDFF00"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="8"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="166" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="167" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/><xf numFmtId="168" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  return zip([["[Content_Types].xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`],
+    ["_rels/.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ["xl/workbook.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xesc(nomeAba)}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'${xesc(nomeAba)}'!$A$1:$${last.replace(/(\d+)$/,"$$$1")}</definedName></definedNames></workbook>`],
+    ["xl/_rels/workbook.xml.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ["xl/styles.xml",styles],["xl/worksheets/sheet1.xml",sheet]])}
+/* planilha diária no layout da empresa: uma linha por hora lançada */
+async function exportarDiaria(){const de=($("#dxDe")&&$("#dxDe").value)||UI.dxDe,ate=($("#dxAte")&&$("#dxAte").value)||UI.dxAte;UI.dxDe=de;UI.dxAte=ate;
+  toast("Gerando planilha…");const j=await api({a:"pcp",de,ate,q:""});const mi=(j.cad&&j.cad.matInfo)||{},ai=(j.cad&&j.cad.acInfo)||{};
+  const parte=m=>{if(mi[m])return mi[m];const w=String(m||"").trim().split(/\s+/);return w.length<3?{t:w[0]||"",c:w[1]||"",q:"",e:""}:{t:w[0],c:w[1],q:w.slice(2,-1).join(" "),e:w[w.length-1]}};
+  const L=j.trat.filter(t=>{const d=String(t.DataProducao).slice(0,10);return d>=de&&d<=ate}).sort((a,b)=>String(a.DataProducao).localeCompare(String(b.DataProducao))||String(a.Turno).localeCompare(String(b.Turno))||String(a.Maquina).localeCompare(String(b.Maquina))||String(a.HoraInicio).localeCompare(String(b.HoraInicio)));
+  if(!L.length){toast("Nenhum lançamento no período.");return}
+  const cols=[{h:"ID",w:13,t:"s"},{h:"Data",w:11,t:"d"},{h:"Maquina_Original",w:18,t:"s"},{h:"Maquina_Padrao",w:18,t:"s"},{h:"Material",w:10,t:"s"},{h:"Classificacao",w:13,t:"s"},{h:"Qualificacao",w:15,t:"s"},{h:"Acondicionado",w:13,t:"s"},{h:"Estado",w:13,t:"s"},
+    {h:"Hora_Inicio",w:11,t:"tm"},{h:"Hora_Fim",w:11,t:"tm"},{h:"Peso_kg",w:10,t:"n0"},{h:"Quantidade",w:11,t:"i"},{h:"Total_Processado_kg",w:19,t:"n0"},{h:"Duracao_h",w:10,t:"n1"},{h:"Prod_kg_h",w:11,t:"n1"},{h:"Equipes",w:22,t:"s"},{h:"Turno",w:10,t:"s"},{h:"Descricao_Completa",w:36,t:"s"}];
+  const rows=L.map(t=>{const p=parte(t.Material);const q=Number(t.Quantidade)>0?Number(t.Quantidade):1;const tot=Number(t.PesoKg)||0;const pu=Number(t.PesoUnitKg)||(q?tot/q:tot);
+    const dh=(Number(t.DuracaoMin)||0)/60;const ac=ai[t.Acondicionamento]||({BAG:"BAGS",PALETE:"PALLETS"}[String(t.Acondicionamento).toUpperCase()]||t.Acondicionamento);
+    return [t.Ordem,String(t.DataProducao).slice(0,10),t.Maquina,t.Maquina,p.t,p.c,p.q,ac,p.e,String(t.HoraInicio).slice(11,16),String(t.HoraFim).slice(11,16),Math.round(pu*100)/100,q,Math.round(tot*100)/100,Math.round(dh*10)/10,dh?Math.round(tot/dh*10)/10:"",t.Equipes||"",String(t.Turno||"")+" TURNO",t.Material]});
+  baixar("Producao_hora_a_hora_"+de+(ate!==de?"_a_"+ate:"")+".xlsx",xlsx("Producao",cols,rows));toast(rows.length+" linha(s) exportada(s).")}
 const ACT={
+  async diariaExcel(){try{await exportarDiaria()}catch(e){toast("Erro: "+e.message)}},
   async confExcel(){try{toast("Gerando planilha…");const {d,L,P}=await dadosConf();if(!L.length&&!P.length){toast("Nenhum lançamento em "+br(d)+".");return}
     const cols=["Data","Turno","Ordem","Máquina","Material","Hora início","Hora fim","Operador","Acondicionamento","Quantidade","Peso por unidade (kg)","Peso total (kg)","Status PCP","Pedido do operador","Conferido (S/N)","Peso conferido (kg)","Obs. da conferência"];
     const rows=L.map(t=>({"Data":br(d),"Turno":t.Turno,"Ordem":t.Ordem,"Máquina":t.Maquina,"Material":t.Material,"Hora início":hm(t.HoraInicio),"Hora fim":hm(t.HoraFim),"Operador":t.Operador,"Acondicionamento":t.Acondicionamento,"Quantidade":t.Quantidade,
@@ -376,7 +428,7 @@ const ACT={
   atualizar(){return carregar(false)},
   limparBusca(){UI.f.ordem="";carregar(false)},
   async salvarCorr(){const r=P.trat[UI.reg],c=UI.cf;const pesoAnt=String(r.PesoKg).replace(".",",");
-    const mud=[["PesoKg",pesoAnt,c.peso],["Quantidade",String(r.Quantidade??""),c.qtd],["Maquina",r.Maquina,c.maq],["Material",r.Material,c.mat],["Turno",r.Turno,c.turno],["Acondicionamento",r.Acondicionamento,c.acond]].filter(([,a,b])=>String(a)!=String(b));
+    const mud=[["PesoKg",pesoAnt,c.peso],["Quantidade",String(r.Quantidade??""),c.qtd],["Maquina",r.Maquina,c.maq],["Material",r.Material,c.mat],["Turno",r.Turno,c.turno],["Acondicionamento",r.Acondicionamento,c.acond],["Equipes",String(r.Equipes||""),c.eq.split(/[,;]+/).map(x=>x.trim()).filter(Boolean).join(", ")]].filter(([,a,b])=>String(a)!=String(b));
     if(!mud.length){toast("Nenhuma alteração feita.");return}
     if(!c.motivo.trim()){toast("Informe o motivo da correção.");return}
     if(num(c.peso)<=0){toast("Peso inválido.");return}
@@ -401,6 +453,8 @@ function campo(e){const t=e.target;
   if(t.dataset.c!==undefined)UI.cf[t.dataset.c]=t.value;
   else if(t.dataset.ff!==undefined){UI.f[t.dataset.ff]=t.value;re=true;if(t.dataset.ff==="de"||t.dataset.ff==="ate"){if(e.type==="change")carregar(true)}}
   else if(t.id==="confD"){UI.confD=t.value}
+  else if(t.id==="dxDe"){UI.dxDe=t.value;if(UI.dxAte<t.value){UI.dxAte=t.value;const a=$("#dxAte");if(a)a.value=t.value}}
+  else if(t.id==="dxAte"){UI.dxAte=t.value}
   else if(t.id==="logq"){UI.logq=t.value;clearTimeout(window._lq);window._lq=setTimeout(()=>{suave();setTimeout(()=>{const x=$("#logq");if(x){x.focus();x.setSelectionRange(x.value.length,x.value.length)}},0)},350)}
   else if(t.id==="fordem"){UI.f.ordem=t.value;clearTimeout(window._bq);window._bq=setTimeout(()=>carregar(true),600)}
   else return;
