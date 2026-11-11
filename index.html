@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>ERP Produção – Operador</title>
+<title>Gestão da Produção – Operador</title>
 <style>
 :root{--lime:#CDFF00;--limeD:#708C00;--limeL:#F3FFCC;--dark:#1C1E1A;--bg:#F5F6F2;--bd:#D6DAD0;--tx:#1C1E1A;--tx2:#686E64;--okL:#D6F0E0;--warn:#E6A800;--warnL:#FFF3CD;--err:#DC3545;--errL:#FFE4E6}
 *{box-sizing:border-box}
@@ -65,7 +65,7 @@ td,th{padding:9px 8px;border-bottom:1px solid var(--bd);text-align:left}th{font-
 <script>
 "use strict";
 /* ======================================================================
-   ERP Produção – App do Operador (versão HTML, sem servidor)
+   Gestão da Produção – App do Operador (versão HTML, sem servidor)
    Os dados ficam guardados neste navegador, neste aparelho.
    No fim do turno, "Exportar turno" grava arquivos CSV na pasta escolhida
    (ex.: a pasta PRODUÇÃO sincronizada pelo OneDrive).
@@ -193,7 +193,7 @@ function tela(){
     <div class="foot"><button class="btn" data-act="entrar"${sel&&UI.pin.length===4?"":" disabled"}>Entrar</button></div>`}
   case "inicio":{
     const o=ordemAberta();const hoje=S.lanc.filter(l=>l.uid===u.id&&l.data===today()).length;
-    return hd("ERP Produção",null,SAIR)+`<div class="body"><div class="big1">Olá, ${esc(u.nome)}</div><div class="muted" style="margin-bottom:14px">Turno ${esc(u.turno)} · ${br(today())}</div>
+    return hd("Gestão da Produção",null,SAIR)+`<div class="body"><div class="big1">Olá, ${esc(u.nome)}</div><div class="muted" style="margin-bottom:14px">Turno ${esc(u.turno)} · ${br(today())}</div>
     <div class="${o?"info":"box"}" style="margin:0 0 6px">${o?`Ordem aberta: <b>${o.num}</b><br>${esc(o.maq)} · Turno ${esc(o.turno)} · ${brc(o.data)}`:"Nenhuma ordem aberta"}</div>
     ${o&&o.data<today()?`<div class="warn">⚠ Esta ordem é de outro dia. Encerre e abra uma nova.</div>`:""}
     <button class="btn big" style="margin-top:12px" data-go="${o?"ordem":"abrir"}">${o?"Lançar hora na "+o.num:"Abrir ordem de processo"}</button>

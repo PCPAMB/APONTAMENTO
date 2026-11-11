@@ -140,7 +140,7 @@ svg text{font-family:inherit}
 
 <div class="app">
 <nav class="side" aria-label="Menu">
- <div class="brand"><div class="mk"><img src="marca.png" alt="" onerror="this.remove()"></div><div><b>AMBIPAR</b><span>ERP Produção</span></div></div>
+ <div class="brand"><div class="mk"><img src="marca.png" alt="" onerror="this.remove()"></div><div><b>AMBIPAR</b><span>Gestão da Produção</span></div></div>
  <div class="nav" id="nav">
   <a href="#visao" class="on"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>Visão geral</a>
   <a href="#maquinas"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="10" rx="2"/><path d="M7 9V5h10v4"/></svg>Máquinas</a>
@@ -173,7 +173,7 @@ svg text{font-family:inherit}
   <section class="box" style="flex:1 1 420px" id="operadores"><div class="hd2"><h2>Por operador</h2><span>kg, horas trabalhadas e média por hora</span></div><div id="c5"></div></section>
  </div>
  <section class="box" id="pcp"><div class="hd2"><h2>Acondicionamento e conferência do PCP</h2><span>unidades produzidas e pendências</span></div><div id="c6"></div></section>
- <div class="foot"><span>AMBIPAR · ERP PRODUÇÃO · números da base tratada (já com as correções do PCP)</span><img src="logo_preto.png" alt="Ambipar" style="height:20px;width:auto" onerror="this.remove()"></div>
+ <div class="foot"><span>AMBIPAR · GESTÃO DA PRODUÇÃO · números da base tratada (já com as correções do PCP)</span><img src="logo_preto.png" alt="Ambipar" style="height:20px;width:auto" onerror="this.remove()"></div>
 </main>
 </div>
 <div class="bar-lime"></div>
@@ -283,7 +283,8 @@ function corPct(p){return p>=95?"var(--good)":p>=80?"var(--warn)":"var(--crit)"}
 function serie(Lm){if(S.p==="1"){const out=[];for(let h=H_INI;h<H_FIM;h++)out.push(Lm.filter(r=>r.h===h).reduce((s,r)=>s+r.kg,0));return out}
   const out=[];for(let d=inicioPer();d<=TODAY;d=addD(d,1))if(produz(d)||Lm.some(r=>r.d===d))out.push(Lm.filter(r=>r.d===d).reduce((s,r)=>s+r.kg,0));return out.slice(-16)}
 function spark(v,cor,H=38,w=5){const mx=Math.max(1,...v);return `<div class="spark" aria-hidden="true" style="height:${H}px">${v.map(x=>`<i style="height:${Math.max(2,Math.round(x/mx*H))}px;width:${w}px;background:${cor}"></i>`).join("")}</div>`}
-function opcoes(){} /* filtros agora são os chips de grupo (render) */
+function opcoes(){}
+function ultEq(ls){for(let i=ls.length-1;i>=0;i--)if(ls[i].eq)return ls[i].eq;return ""} /* filtros agora são os chips de grupo (render) */
 let EM={};
 function render(){
   const L=H.filter(dentro),PA=P.filter(dentro);const tot=L.reduce((s,r)=>s+r.kg,0);
@@ -353,8 +354,8 @@ function render(){
       em.map(x=>`<tr class="clk" data-maq="${esc(x.m)}"><td>${gTag(x.g)}<b>${esc(x.m)}</b></td><td class="num">${x.cap?fmt(x.cap):"—"}</td><td class="num">${x.hp?fmt(x.kgh):"—"}</td><td class="num">${fh(x.hp)}</td><td class="num">${fh(x.hpar)}</td><td class="num"><b>${fmt(x.kg)}</b> kg</td><td class="num">${x.cap?pf(x.disp):"—"}</td><td class="num">${pf(x.desemp)}</td><td class="num">${mini2(x.efic)}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="muted">Sem dados no filtro.</p>`);
   /* ordens abertas */
   $("#nab").textContent=ab.length+" ordem(ns)";
-  $("#c3").innerHTML=ab.length?`<div class="tw"><table><thead><tr><th>Ordem</th><th>Operador</th><th>Máquina</th><th class="num">Horas</th><th class="num">kg</th><th>Última hora</th></tr></thead><tbody>`+
-    ab.map(o=>{const ls=H.filter(r=>r.ord===o.ord&&r.d===o.d);const ult=ls.length?Math.max(...ls.map(r=>r.h)):null;return `<tr class="clk" id="r-${o.ord}" data-maq="${esc(o.m)}"><td><b>${o.ord}</b></td><td>${esc(o.op)}</td><td>${gTag(grupoDe(o.m))}${esc(o.m)}</td><td class="num">${fh(hSoma(ls))}</td><td class="num">${fmt(ls.reduce((s,r)=>s+r.kg,0))}</td><td>${ult===null?"—":`<span class="st on"><i></i>${pad(ult)}:00–${pad(ult+1)}:00</span>`}</td></tr>`}).join("")+`</tbody></table></div>`:`<p class="muted">Nenhuma ordem aberta agora.</p>`;
+  $("#c3").innerHTML=ab.length?`<div class="tw"><table><thead><tr><th>Ordem</th><th>Operador</th><th>Equipe</th><th>Máquina</th><th class="num">Horas</th><th class="num">kg</th><th>Última hora</th></tr></thead><tbody>`+
+    ab.map(o=>{const ls=H.filter(r=>r.ord===o.ord&&r.d===o.d);const ult=ls.length?Math.max(...ls.map(r=>r.h)):null;return `<tr class="clk" id="r-${o.ord}" data-maq="${esc(o.m)}"><td><b>${o.ord}</b></td><td>${esc(o.op)}</td><td style="white-space:normal;max-width:220px">${esc(ultEq(ls))||'<span class="muted">—</span>'}</td><td>${gTag(grupoDe(o.m))}${esc(o.m)}</td><td class="num">${fh(hSoma(ls))}</td><td class="num">${fmt(ls.reduce((s,r)=>s+r.kg,0))}</td><td>${ult===null?`<span class="muted">aberta${o.ab?" às "+esc(o.ab):""} · sem hora lançada</span>`:`<span class="st on"><i></i>${pad(ult)}:00–${pad(ult+1)}:00</span>`}</td></tr>`}).join("")+`</tbody></table></div>`:`<p class="muted">Nenhuma ordem aberta agora.</p>`;
   /* operadores */
   const po={};L.forEach(r=>{const o=po[r.op]||(po[r.op]={op:r.op,tu:r.tu,kg:0,h:0});o.kg+=r.kg;o.h+=hLin(r)});const lo=Object.values(po).sort((a,b)=>b.kg-a.kg);
   $("#c5").innerHTML=lo.length?`<div class="tw"><table><thead><tr><th>Operador</th><th>Turno</th><th class="num">kg</th><th class="num">Horas</th><th class="num">kg/h</th></tr></thead><tbody>`+lo.map(o=>`<tr><td>${esc(o.op)}</td><td>${o.tu}</td><td class="num"><b>${fmt(o.kg)}</b></td><td class="num">${fh(o.h)}</td><td class="num">${o.h?fmt(o.kg/o.h):"—"}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="muted">Sem dados.</p>`;
@@ -378,7 +379,8 @@ function render(){
 function abrirMaq(m,soAtualizar){S.sel=m;const dw=$("#dw");const L=H.filter(r=>noPer(r)&&r.m===m),PA=P.filter(p=>noPer(p)&&p.m===m);
   const g=grupoDe(m),D=diasPer();const kg=L.reduce((s,r)=>s+r.kg,0),meta=((MI[m]&&MI[m].meta)||0)*(S.tu?0.5:1)*D.tot,metaEsp=((MI[m]&&MI[m].meta)||0)*(S.tu?0.5:1)*D.esp;
   const pc=meta?kg/meta*100:null;const x=EM[m]||{};const cap=(MI[m]&&MI[m].cap)||0;const hp=L.reduce((s,r)=>s+(r.min||60),0)/60,hpar=PA.reduce((s,p)=>s+p.min,0)/60;
-  const o=Object.values(abertas).find(a=>a.m===m&&a.d===TODAY);const mat=(L.length?L[L.length-1].mat:"")||MAT[m]||"";
+  const o=Object.values(abertas).find(a=>a.m===m&&a.d===TODAY);const mat=(o&&o.mat)||(L.length?L[L.length-1].mat:"")||MAT[m]||"";
+  const Lo=o?H.filter(r=>r.ord===o.ord):[];const eq=ultEq(Lo.length?Lo:L);
   const pf=v=>v==null?"—":v.toFixed(0)+"%";const per=S.p==="1"?"hoje":S.p==="7"?"7 dias":"no mês";
   const pp={};PA.forEach(p=>pp[p.mot]=(pp[p.mot]||0)+p.min);
   const ult=L.slice().sort((a,b)=>(b.d+pad(b.h)).localeCompare(a.d+pad(a.h))).slice(0,6);
@@ -389,10 +391,11 @@ function abrirMaq(m,soAtualizar){S.sel=m;const dw=$("#dw");const L=H.filter(r=>n
      <div style="font-size:13px;color:#C9CCC4">${meta?`meta ${fmt(meta)} kg · ${kg<meta?"faltam "+fmt(meta-kg)+" kg":"meta batida"}`:"sem meta cadastrada"}</div>${metaEsp?`<div style="margin-top:8px">${badgeDe(kg/metaEsp*100)}</div>`:""}</div></div>
     <div class="dkpi"><div><em>Eficiência</em><b>${pf(x.efic)}</b></div><div><em>Disponib.</em><b>${cap?pf(x.disp):"—"}</b></div><div><em>Desempenho</em><b>${pf(x.desemp)}</b></div></div>
     <div class="dkpi two"><div><em>Horas produzindo</em><b>${fh(hp)} h</b><span>${fmt(hpar*60)} min parada</span></div><div><em>Ritmo</em><b>${hp?fmt(kg/hp):"—"} kg/h</b><span>${cap?"capacidade "+fmt(cap)+" kg/h":"sem capacidade cadastrada"}</span></div></div>
-    <div><h3>Agora</h3><div class="kv">${o?`<span>Operador</span><b>${esc(o.op)}</b><span>Ordem</span><b>${esc(o.ord)}</b><span>Turno</span><b>${esc(o.tu)}</b>`:`<span>Ordem</span><b>nenhuma aberta</b>`}${mat?`<span>Material</span><b style="white-space:normal">${esc(mat)}</b>`:""}${L.length?`<span>Acondicionamento</span><b>${esc(L[L.length-1].ac)}</b>`:""}</div></div>
+    <div><h3>Agora</h3><div class="kv">${o?`<span>Operador</span><b>${esc(o.op)}</b>${eq?`<span>Equipe</span><b style="white-space:normal">${esc(eq)}</b>`:""}<span>Ordem</span><b>${esc(o.ord)}${o.ab?` <span class="muted" style="font-weight:400">aberta às ${esc(o.ab)}</span>`:""}</b><span>Turno</span><b>${esc(o.tu)}</b>`:`<span>Ordem</span><b>nenhuma aberta</b>`}${mat?`<span>Material</span><b style="white-space:normal">${esc(mat)}</b>`:""}${L.length?`<span>Acondicionamento</span><b>${esc(L[L.length-1].ac)}</b>`:""}</div>
+    ${o&&!Lo.length?`<div class="aviso" style="margin-top:10px">Nenhuma hora lançada ainda nesta ordem. Os números aparecem aqui quando o operador <b>lança a hora</b> no app e o celular envia (com internet).</div>`:""}</div>
     <div><h3>${S.p==="1"?"Hora a hora":"Por dia"}</h3><div id="dwg"></div></div>
     <div><h3>Paradas</h3>${Object.keys(pp).length?Object.entries(pp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="li"><span>${esc(k)}</span><b>${fmt(v)} min</b></div>`).join(""):`<div class="li"><span class="muted">Nenhuma parada ${per}.</span></div>`}</div>
-    <div><h3>Últimos lançamentos</h3>${ult.length?ult.map(r=>`<div class="li"><span>${S.p==="1"?"":r.d.slice(8)+"/"+r.d.slice(5,7)+" "}${pad(r.h)}:00 · ${esc(String(r.op).split(" ")[0])} · ${fmt(r.q)} ${esc(r.ac)}</span><span><b>${fmt(r.kg)} kg</b> ${stc(r)}</span></div>`).join(""):`<div class="li"><span class="muted">Sem lançamentos ${per}.</span></div>`}</div>
+    <div><h3>Últimos lançamentos</h3>${ult.length?ult.map(r=>`<div class="li"><span>${S.p==="1"?"":r.d.slice(8)+"/"+r.d.slice(5,7)+" "}${pad(r.h)}:00 · ${esc(String(r.op).split(" ")[0])} · ${fmt(r.q)} ${esc(r.ac)}</span><span><b>${fmt(r.kg)} kg</b> ${stc(r)}</span></div>${r.eq?`<div class="muted" style="font-size:12px;margin:-4px 0 4px">equipe: ${esc(r.eq)}</div>`:""}`).join(""):`<div class="li"><span class="muted">Sem lançamentos ${per}.</span></div>`}</div>
     <div class="muted">Números da base tratada (já com as correções do PCP).</div>`;
   if(!soAtualizar){dw.classList.add("open");document.body.style.overflow="hidden";setTimeout(()=>{const f=dw.querySelector(".x");if(f)f.focus()},50)}
   const b=barrasPeriodo(L,meta/(D.tot||1),170);vbars($("#dwg"),b.items,b.opt)}

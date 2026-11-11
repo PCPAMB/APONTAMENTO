@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>ERP Produção – Central PCP</title>
+<title>Gestão da Produção – Central PCP</title>
 <style>
 :root{--lime:#CDFF00;--limeD:#708C00;--limeL:#F3FFCC;--dark:#1C1E1A;--bg:#F5F6F2;--bd:#D6DAD0;--tx:#1C1E1A;--tx2:#686E64;--okL:#D6F0E0;--warn:#E6A800;--warnL:#FFF3CD;--err:#DC3545;--errL:#FFE4E6}
 *{box-sizing:border-box}
@@ -67,7 +67,7 @@ tr.dup td{background:var(--errL)}
 <script>
 "use strict";
 /* ======================================================================
-   ERP Produção – Central PCP (versão HTML, sem servidor)
+   Gestão da Produção – Central PCP (versão HTML, sem servidor)
    Importa os arquivos LANCAMENTOS_*.csv e PARADAS_*.csv exportados pelos
    aparelhos, guarda a BASE BRUTA (nunca alterada), a BASE TRATADA (corrigida)
    e o HISTÓRICO de alterações. Exporta tudo em CSV para o Excel.
@@ -198,11 +198,11 @@ function tela(){
     </tbody></table></div><p class="muted">Linha vermelha = possível duplicidade (mesma hora lançada duas vezes na ordem, ou mesma máquina, hora e peso). Clique numa linha para conferir.</p></div>`}
   case "ordens":{
     const g={};(P.ordens||[]).forEach(o=>{const d=String(o.DataProducao||"").slice(0,10);if(d<UI.f.de||d>UI.f.ate)return;g[o.Ordem]={Ordem:String(o.Ordem),Data:d,Turno:o.Turno,Maquina:o.Maquina,Material:o.Material,Operador:o.Operador,St:o.Status||"Aberta",h:0,kg:0,val:0}});
-    TRAT().filter(t=>t.DataProducao>=UI.f.de&&t.DataProducao<=UI.f.ate).forEach(t=>{const o=g[t.Ordem]||(g[t.Ordem]={Ordem:t.Ordem,Data:t.DataProducao,Turno:t.Turno,Maquina:t.Maquina,Material:t.Material,Operador:t.Operador,St:t.StatusOrdem,h:0,kg:0,val:0});o.h++;o.kg+=t.PesoKg;if(t.StatusTratado=="Validado")o.val++;if(t.StatusOrdem=="Encerrada")o.St="Encerrada";if(P.stOrd&&P.stOrd[t.Ordem])o.St=P.stOrd[t.Ordem]});
+    TRAT().filter(t=>t.DataProducao>=UI.f.de&&t.DataProducao<=UI.f.ate).forEach(t=>{const o=g[t.Ordem]||(g[t.Ordem]={Ordem:t.Ordem,Data:t.DataProducao,Turno:t.Turno,Maquina:t.Maquina,Material:t.Material,Operador:t.Operador,St:t.StatusOrdem,h:0,n:0,kg:0,val:0});o.n++;o.h+=h1(t);o.kg+=t.PesoKg;if(t.StatusTratado=="Validado")o.val++;if(t.StatusOrdem=="Encerrada")o.St="Encerrada";if(P.stOrd&&P.stOrd[t.Ordem])o.St=P.stOrd[t.Ordem]});
     const L=Object.values(g).sort((a,b)=>b.Ordem.localeCompare(a.Ordem));
     return header()+`<div class="wrap"><div class="filters"><div class="f"><span class="lbl">De</span><input class="in" type="date" data-ff="de" value="${UI.f.de}"></div><div class="f"><span class="lbl">Até</span><input class="in" type="date" data-ff="ate" value="${UI.f.ate}"></div></div>
     <div class="tw"><table><thead><tr><th>Ordem</th><th>Data</th><th>Turno</th><th>Máquina</th><th>Material</th><th>Operador</th><th class="num">Horas</th><th class="num">Total (kg)</th><th>Validadas</th><th>Ordem</th></tr></thead><tbody>
-    ${L.length?L.map(o=>`<tr class="click" data-ordem="${esc(o.Ordem)}"><td><b>${esc(o.Ordem)}</b></td><td>${br(o.Data)}</td><td>${esc(o.Turno)}</td><td>${esc(o.Maquina)}</td><td>${esc(o.Material)}</td><td>${esc(o.Operador)}</td><td class="num">${o.h}</td><td class="num"><b>${kg(o.kg)}</b></td><td>${o.val}/${o.h}</td><td>${o.St=="Encerrada"?chip("Encerrada"):o.St=="Cancelada"?`<span class="chip" style="background:var(--errL);color:#9b1c1c">Cancelada</span>`:`<span class="chip Aberta">Aberta</span>`}${!o.h&&o.St=="Aberta"?`<br><span class="muted" style="font-size:11.5px">sem horas lançadas</span>`:""}</td></tr>`).join(""):`<tr><td colspan="10" class="empty">Nenhuma ordem no período.</td></tr>`}
+    ${L.length?L.map(o=>`<tr class="click" data-ordem="${esc(o.Ordem)}"><td><b>${esc(o.Ordem)}</b></td><td>${br(o.Data)}</td><td>${esc(o.Turno)}</td><td>${esc(o.Maquina)}</td><td>${esc(o.Material)}</td><td>${esc(o.Operador)}</td><td class="num">${fh(o.h)}</td><td class="num"><b>${kg(o.kg)}</b></td><td>${o.val}/${o.n}</td><td>${o.St=="Encerrada"?chip("Encerrada"):o.St=="Cancelada"?`<span class="chip" style="background:var(--errL);color:#9b1c1c">Cancelada</span>`:`<span class="chip Aberta">Aberta</span>`}${!o.h&&o.St=="Aberta"?`<br><span class="muted" style="font-size:11.5px">sem horas lançadas</span>`:""}</td></tr>`).join(""):`<tr><td colspan="10" class="empty">Nenhuma ordem no período.</td></tr>`}
     </tbody></table></div><p class="muted">"Aberta" = o operador ainda não encerrou. "Sem horas lançadas" = a ordem foi aberta mas nenhuma hora chegou ainda. Clique numa ordem para ver as horas.</p></div>`}
   case "conf":{
     const r=P.trat[UI.reg];if(!r){UI.tela="painel";return tela()}const o=P.bruta[r.ID];const c=UI.cf;
