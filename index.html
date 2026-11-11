@@ -104,7 +104,7 @@ function hh(iso){return iso?iso.slice(11,16):""}
 function kg(n){return Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function num(s){const v=parseFloat(String(s??"").replace(/\./g,"").replace(",","."));return isNaN(v)?0:v}
 function mins(a,b){return Math.round((new Date(b)-new Date(a))/60000)}
-function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3000)}
+function toast(m,ms){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),ms||3000)}
 function opts(list,sel,ph){return (ph!==undefined?`<option value="">${esc(ph)}</option>`:"")+list.map(v=>`<option${v==sel?" selected":""}>${esc(v)}</option>`).join("")}
 function hourOpts(sel){return Array.from({length:24},(_,i)=>`<option value="${i}"${i==sel?" selected":""}>${pad(i)}</option>`).join("")}
 function minOpts(sel){return Array.from({length:12},(_,i)=>i*5).map(m=>`<option value="${m}"${m==sel?" selected":""}>${pad(m)}</option>`).join("")}
@@ -133,7 +133,16 @@ async function enviar(manual){if(!online()||enviando)return;const tot=pendentesE
     S.ultimoEnvio=nowIso();S.erroEnvio="";salvar();if(manual)toast("Enviado ✓");}
   catch(e){S.erroEnvio=e.message;salvar();if(manual)toast("Não enviou: "+e.message)}
   finally{enviando=false;if(["login","ordem","meus","admin"].includes(UI.tela))suave()}}
-setInterval(()=>enviar(false),30000);window.addEventListener("online",()=>enviar(false));
+setInterval(()=>enviar(false),30000);
+/* busca no servidor as correções do PCP enquanto o operador está com a ordem ou a lista aberta (a cada 30 s) */
+const assinatura=l=>[l.peso,l.qtd,l.acond,l.ini,l.fim,l.corr].join("|");
+setInterval(()=>{const u=UI.u&&user();if(!u||document.hidden||!["ordem","inicio","meus"].includes(UI.tela))return;
+  const antes={};S.lanc.forEach(l=>{if(l.sync)antes[l.id]=assinatura(l)});
+  sincronizarOrdem(u).then(()=>{const mud=S.lanc.filter(l=>l.uid===u.id&&antes[l.id]!==undefined&&antes[l.id]!==assinatura(l));
+    if(!mud.length)return;
+    const o=ordemAberta();const nesta=o?mud.filter(l=>l.ordem===o.num):[];
+    if(["ordem","inicio","meus"].includes(UI.tela))suave();
+    toast("✏️ O PCP corrigiu "+(mud.length===1?"a hora "+hh(mud[0].ini)+"–"+hh(mud[0].fim)+(mud[0].corr&&mud[0].orig?": agora "+kg(mud[0].peso)+" kg":""):mud.length+" horas")+(nesta.length&&nesta.length<mud.length?" (nesta ordem: "+nesta.length+")":""),8000)})},30000);window.addEventListener("online",()=>enviar(false));
 /* número de ordem que já existia neste aparelho (de testes apagados da planilha): tira o histórico antigo já enviado */
 function descartarNumero(num){S.ordens=S.ordens.filter(x=>x.num!==num);S.lanc=S.lanc.filter(l=>!(l.ordem===num&&l.sync));S.paradas=S.paradas.filter(p=>!(p.ordem===num&&p.sync))}
 /* "joão,maria ;  pedro" -> "João, Maria, Pedro" */
@@ -141,8 +150,10 @@ function equipeTxt(v){return String(v||"").split(/[,;]+/).map(x=>x.trim().replac
 async function sincronizarOrdem(u){/* a ordem aberta pode ter sido começada em outro aparelho */
   if(!online())return;try{const j=await api({a:"ordemAberta",uid:u.id},8000);
     if(j.ordem){let o=S.ordens.find(x=>x.num===j.ordem.num);if(o&&o.abertura&&j.ordem.abertura&&o.abertura.slice(0,16)!==j.ordem.abertura.slice(0,16)){descartarNumero(o.num);o=null}
-      if(!o){o=Object.assign({},j.ordem,{total:0,horas:0});S.ordens.push(o)}else Object.assign(o,j.ordem);o.status="Aberta";
-      j.linhas.forEach(l=>{if(!S.lanc.some(x=>x.id===l.id))S.lanc.push(l)});}
+      if(!o){o=Object.assign({},j.ordem,{total:0,horas:0});S.ordens.push(o)}else Object.assign(o,j.ordem);o.status="Aberta";}
+    /* o que está no servidor vale (inclusive correções do PCP); o que ainda não foi enviado fica como está */
+    (j.linhas||[]).concat(j.corrigidas||[]).forEach(l=>{const x=S.lanc.find(y=>y.id===l.id);if(!x)S.lanc.push(l);else if(x.sync)Object.assign(x,l,{exp:x.exp})});
+    if(j.ordem){}
     else{S.ordens.filter(o=>o.uid===u.id&&o.status==="Aberta"&&!S.fila.some(f=>f.t==="enc"&&f.ordem===o.num)).forEach(o=>o.status="Encerrada")}
     salvar()}catch(e){}}
 
@@ -178,7 +189,7 @@ function tela(){
     <div class="lbl">${sel?"PIN de "+esc(sel.nome):"Toque no seu nome"}</div>
     <input class="in pin" id="pin" type="text" readonly onfocus="this.removeAttribute('readonly')" inputmode="numeric" maxlength="4" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore value="${esc(UI.pin)}" placeholder="PIN (4 dígitos)">
     ${online()?`<div class="box" style="margin-top:16px">${pendentesEnvio()?`<b>⏳ ${pendentesEnvio()} item(ns) aguardando internet</b><div class="muted" style="margin:4px 0 8px">Ficam guardados neste aparelho e são enviados sozinhos quando a internet voltar.${S.erroEnvio?" ("+esc(S.erroEnvio)+")":""}</div><button class="btn sec" data-act="enviarAgora">Enviar agora</button>`:`<b>✓ Tudo enviado</b><div class="muted">${S.ultimoEnvio?"Último envio: "+br(S.ultimoEnvio):"Lançamentos vão direto para o servidor."}${abertas.length?` · ${abertas.length} ordem(ns) aberta(s) neste aparelho`:""}</div>`}</div>`:""}
-    <div style="text-align:center;margin-top:10px"><button class="linkbtn" data-go="admin">${S.cfg.adminPin?"Administração":"Configurar este aparelho"}</button><div class="muted" style="font-size:11px;margin-top:6px">versão do app 1.8</div></div></div>
+    <div style="text-align:center;margin-top:10px"><button class="linkbtn" data-go="admin">${S.cfg.adminPin?"Administração":"Configurar este aparelho"}</button><div class="muted" style="font-size:11px;margin-top:6px">versão do app 2.0</div></div></div>
     <div class="foot"><button class="btn" data-act="entrar"${sel&&UI.pin.length===4?"":" disabled"}>Entrar</button></div>`}
   case "inicio":{
     const o=ordemAberta();const hoje=S.lanc.filter(l=>l.uid===u.id&&l.data===today()).length;
@@ -214,12 +225,12 @@ function tela(){
     <div><div class="lbl">Acondicionamento *</div><select class="sel" data-h="acond">${opts(S.cad.acond,h.acond,"Selecione…")}</select></div>
     <div><div class="lbl">Observação</div><input class="in" data-h="obs" value="${esc(h.obs)}" placeholder="Opcional"></div></div>
     <div style="margin-top:10px"><div class="lbl">Equipe (nomes separados por vírgula)</div><input class="in" data-h="eq" value="${esc(h.eq!==undefined?h.eq:(o.equipe||""))}" placeholder="ex.: João, Maria, Pedro" autocomplete="off" autocapitalize="words"></div>
-    <div class="box" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center"><span>Total da hora<br><span class="muted">${pu?kg(pu)+" kg × "+qt+(h.qtd?"":" (quantidade vazia = 1)"):"peso × quantidade"}</span></span><b style="font-size:22px">${kg(totH)} kg</b></div>
+    <div class="box" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center"><span>Total da hora<br><span class="muted">${pu?"peso por unidade "+kg(pu)+" kg × quantidade "+qt+(h.qtd?"":" (vazia = 1)"):"peso por unidade (kg) × quantidade (unidades)"}</span></span><b style="font-size:22px;white-space:nowrap;margin-left:10px">${kg(totH)} kg</b></div>
     ${dup?`<div class="warn">⚠ Esta hora já foi lançada nesta ordem.</div>`:""}
     <button class="btn" style="margin-top:12px" data-act="lancar"${h.acond&&pu>0&&totH<=(S.pesoMax||3000)&&sp.dur>0?"":" disabled"}>Lançar esta hora (${sp.dur} min)</button>
     ${totH>(S.pesoMax||3000)?`<p class="warn">Total de ${kg(totH)} kg passa do limite de ${kg(S.pesoMax||3000)} kg por hora. Confira o peso e a quantidade.</p>`:""}${sp.dur<=0?`<p class="warn">A hora final precisa ser depois da inicial.</p>`:""}
     <div class="lbl" style="margin-top:14px">Horas lançadas nesta ordem</div>
-    <div class="tw"><table><tbody>${L.length?L.map(l=>`<tr><td><b>${hh(l.ini)}–${hh(l.fim)}</b></td><td class="num">${kg(l.peso)} kg${l.pu&&l.qtd>1?`<br><span class="muted">${kg(l.pu)} × ${l.qtd}</span>`:""}</td><td>${esc(l.qtd)} ${esc(l.acond)}</td><td>${l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</td></tr>${l.equipe?`<tr><td colspan="4" class="muted" style="white-space:normal;padding-top:0;font-size:13px">👥 Equipe: ${esc(l.equipe)}</td></tr>`:""}`).join(""):`<tr><td class="empty">Nenhuma hora lançada ainda.</td></tr>`}</tbody></table></div></div>
+    <div class="tw"><table><tbody>${L.length?L.map(l=>`<tr><td><b>${hh(l.ini)}–${hh(l.fim)}</b></td><td class="num">${kg(l.peso)} kg${l.pu&&l.qtd>1&&Math.abs(l.pu*l.qtd-l.peso)<0.01?`<br><span class="muted">${kg(l.pu)} × ${l.qtd}</span>`:""}</td><td>${esc(l.qtd)} ${esc(l.acond)}</td><td>${l.corr?`<span class="chip cs">corrigido PCP</span>`:l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</td></tr>${l.corr&&l.orig&&Math.abs(l.orig-l.peso)>0.001?`<tr><td colspan="4" class="muted" style="white-space:normal;padding-top:0;font-size:13px">✏️ PCP corrigiu: era ${kg(l.orig)} kg, ficou ${kg(l.peso)} kg</td></tr>`:""}${l.equipe?`<tr><td colspan="4" class="muted" style="white-space:normal;padding-top:0;font-size:13px">👥 Equipe: ${esc(l.equipe)}</td></tr>`:""}`).join(""):`<tr><td class="empty">Nenhuma hora lançada ainda.</td></tr>`}</tbody></table></div></div>
     ${!L.length&&!S.paradas.some(p=>p.ordem===o.num)?`<div style="margin-top:14px;text-align:center"><button class="linkbtn" data-act="cancelarOrdem" style="color:${UI.confCanc?"#b3261e":"inherit"}">${UI.confCanc?"Toque de novo para CANCELAR a "+o.num:"Abri esta ordem por engano: cancelar"}</button><div class="muted" style="font-size:11.5px">Só é possível enquanto nenhuma hora foi lançada. Fica registrado.</div></div>`:""}
     <div class="foot"><button class="btn sec${UI.confEnc?" warnb":""}" data-act="encerrar">${UI.confEnc?"Toque de novo para confirmar":"Encerrar ordem (fim do turno)"}</button></div>`}
   case "encerrada":{
@@ -248,8 +259,8 @@ function tela(){
     const sel=S.lanc.find(l=>l.id===UI.meusSel);
     return hd("Meus lançamentos","inicio")+`<div class="body">
     <input class="in" id="buscaMeus" value="${esc(UI.buscaMeus)}" placeholder="Buscar nº da ordem (ex.: 000123)" style="margin-bottom:10px">
-    ${L.length?L.map(l=>`<div class="card${l.id===UI.meusSel?" escolhido":""}" data-meus="${l.id}"><div class="l1"><b>${l.ordem} <span style="font-weight:400;font-size:14px">${hh(l.ini)}–${hh(l.fim)}</span></b>${l.pedido?`<span class="chip cs">Correção pedida</span>`:l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</div>
-      <div style="font-size:14px;margin-top:3px">${esc(l.maq)} · ${esc(l.mat)}</div><div class="muted">${kg(l.peso)} kg${l.pu&&l.qtd>1?" ("+kg(l.pu)+" × "+l.qtd+")":""} · ${esc(l.qtd)} ${esc(l.acond)} · ${brc(l.ini)}</div></div>`).join(""):`<div class="empty">Nenhum lançamento nos últimos 30 dias.</div>`}
+    ${L.length?L.map(l=>`<div class="card${l.id===UI.meusSel?" escolhido":""}" data-meus="${l.id}"><div class="l1"><b>${l.ordem} <span style="font-weight:400;font-size:14px">${hh(l.ini)}–${hh(l.fim)}</span></b>${l.corr?`<span class="chip cs">corrigido PCP</span>`:l.pedido?`<span class="chip cs">Correção pedida</span>`:l.sync?`<span class="chip ok">enviado ✓</span>`:`<span class="chip">⏳ aguardando</span>`}</div>
+      <div style="font-size:14px;margin-top:3px">${esc(l.maq)} · ${esc(l.mat)}</div><div class="muted">${kg(l.peso)} kg${l.pu&&l.qtd>1&&Math.abs(l.pu*l.qtd-l.peso)<0.01?" ("+kg(l.pu)+" × "+l.qtd+")":""} · ${esc(l.qtd)} ${esc(l.acond)} · ${brc(l.ini)}${l.corr&&l.orig&&Math.abs(l.orig-l.peso)>0.001?` · <b>era ${kg(l.orig)} kg</b>`:""}</div></div>`).join(""):`<div class="empty">Nenhum lançamento nos últimos 30 dias.</div>`}
     <div class="lbl" style="margin-top:12px">${sel?"Pedir correção da hora "+hh(sel.ini)+"–"+hh(sel.fim)+" da ordem "+sel.ordem:"Selecione um lançamento acima para pedir correção"}</div>
     <textarea class="in" id="pedido" placeholder="Descreva o que precisa ser corrigido (ex.: o peso certo é 115 kg)">${esc(UI.pedido)}</textarea></div>
     <div class="foot"><button class="btn" data-act="pedir"${sel&&UI.pedido.trim()?"":" disabled"}>Pedir correção</button></div>`}
@@ -388,7 +399,7 @@ function suave(){const a=document.activeElement,k=a&&chave(a),s=a&&a.selectionSt
   const el=[...document.querySelectorAll("input,textarea,select")].find(x=>chave(x)===k);if(el){el.focus();try{if(s!=null)el.setSelectionRange(s,s)}catch(_){}}}
 document.addEventListener("click",async e=>{
   const t=e.target.closest("[data-go],[data-act],[data-sel],[data-meus],[data-admtab]");if(!t||t.disabled)return;
-  if(t.dataset.go){UI.tela=t.dataset.go;UI.confEnc=false;if(t.dataset.go=="abrir")UI.form={};if(t.dataset.go=="ordem")UI.h={};if(t.dataset.go=="meus"){UI.meusSel=null;UI.pedido=""}if(t.dataset.go=="login")UI.admOk=false}
+  if(t.dataset.go){UI.tela=t.dataset.go;UI.confEnc=false;if(t.dataset.go=="abrir")UI.form={};if(t.dataset.go=="ordem")UI.h={};if(t.dataset.go=="meus"){UI.meusSel=null;UI.pedido="";const u=user();if(u)sincronizarOrdem(u).then(()=>{if(UI.tela==="meus")suave()})}if(t.dataset.go=="login")UI.admOk=false}
   else if(t.dataset.act){await ACT[t.dataset.act]()}
   else if(t.dataset.sel){UI.sel=t.dataset.sel;UI.pin=""}
   else if(t.dataset.meus){UI.meusSel=t.dataset.meus}
