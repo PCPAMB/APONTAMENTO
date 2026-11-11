@@ -4,107 +4,180 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Painel da Produção</title>
+<title>Painel da Produção · Ambipar</title>
 <style>
-:root{--lime:#CDFF00;--limeD:#708C00;--limeL:#F3FFCC;--dark:#1C1E1A;--bg:#F5F6F2;--surface:#fcfcfb;--bd:#D6DAD0;--grid:#E6E8E1;
-  --tx:#1C1E1A;--tx2:#5a5f55;--tx3:#80857a;--s1:#5f7a00;--s2:#2a78d6;--good:#1a7f37;--goodL:#D6F0E0;--warn:#b25e00;--warnL:#FFF3CD;--crit:#c62828;--critL:#FFE4E6}
+:root{--lime:#CDFF00;--limeD:#9CC800;--limeL:#F6FFD9;--dark:#111111;--ink:#111111;--bg:#F4F5F1;--card:#FFFFFF;--bd:#E6E7E2;--grid:#EEEFEA;
+  --tx:#111111;--tx2:#5E615B;--tx3:#8A8D86;--s1:#111111;--s2:#9CC800;--g3:#8E918A;--good:#1f6b10;--goodL:#E8FFB3;--warn:#8a5200;--warnL:#FFF3CD;--crit:#b3261e;--critL:#FFE4E0}
 *{box-sizing:border-box}
-body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--tx);background:var(--bg)}
-button,select{font:inherit;color:inherit}
-.hd{background:var(--dark);color:var(--lime);display:flex;align-items:center;gap:14px;padding:12px 22px;border-bottom:5px solid var(--lime);flex-wrap:wrap}
-.hd .t{font-size:20px;font-weight:600}
-.hd .live{margin-left:auto;display:flex;align-items:center;gap:8px;color:#d9dccf;font-size:13px}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 0 rgba(205,255,0,.7);animation:p 2s infinite}
+html,body{margin:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--tx);background:var(--bg)}
+button,select,input{font:inherit;color:inherit}
+a{color:inherit}
+.app{max-width:1500px;margin:0 auto;padding:18px;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+/* menu lateral */
+.side{flex:1 1 220px;max-width:240px;min-width:200px;background:var(--ink);border-radius:24px;padding:20px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:18px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px 16px}
+.brand .mk{width:42px;height:42px;border-radius:12px;background:var(--lime);display:flex;align-items:center;justify-content:center;flex:none}
+.brand .mk img{width:27px;height:27px;object-fit:contain}
+.brand b{display:block;color:#fff;font-size:15px;letter-spacing:.06em}.brand span{color:#9EA19A;font-size:12px}
+.nav a{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:12px;text-decoration:none;color:#C9CCC4;font-size:14.5px}
+.nav a:hover{background:#1E201C;color:#fff}
+.nav a.on{background:var(--lime);color:var(--ink);font-weight:700}
+.nav svg{flex:none}
+.live{margin-top:16px;background:#1E201C;border-radius:16px;padding:13px;color:#B5B8B0;font-size:12.5px}
+.live b{display:flex;align-items:center;gap:8px;color:var(--lime);font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--lime);animation:p 2s infinite}
 @keyframes p{0%{box-shadow:0 0 0 0 rgba(205,255,0,.6)}70%{box-shadow:0 0 0 8px rgba(205,255,0,0)}100%{box-shadow:0 0 0 0 rgba(205,255,0,0)}}
-.demo{background:var(--warnL);border-bottom:1px solid #e6c46a;padding:7px 22px;font-size:13px;color:#6b4a00}
-.wrap{padding:16px 22px 30px;max-width:1380px;margin:0 auto}
-.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-.seg{display:inline-flex;border:1px solid var(--bd);border-radius:9px;overflow:hidden;background:#fff}
-.seg button{border:0;background:transparent;padding:8px 14px;cursor:pointer;font-size:14px}
-.seg button.on{background:var(--dark);color:var(--lime);font-weight:600}
-.sel{height:38px;border:1px solid var(--bd);border-radius:9px;background:#fff;padding:0 10px;font-size:14px}
-.kpis{display:grid;grid-template-columns:2fr repeat(5,1fr);gap:12px;margin-bottom:14px}
-.kpi{background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:12px 14px}
-.kpi .l{font-size:12.5px;color:var(--tx2)}
-.kpi .v{font-size:28px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
-.kpi .s{font-size:12.5px;color:var(--tx2);margin-top:2px}
-.kpi.hero .v{font-size:38px}
-.bar{height:10px;border-radius:5px;background:var(--grid);overflow:hidden;margin-top:8px}
-.bar i{display:block;height:100%;border-radius:5px;background:var(--s1)}
-.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle}
+/* conteúdo */
+main{flex:999 1 680px;min-width:0;display:flex;flex-direction:column;gap:16px}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.top .tt{flex:1;min-width:230px}.top .dd{font-size:13px;color:var(--tx2)}.top h1{margin:2px 0 0;font-size:30px;font-weight:800;letter-spacing:-.01em}
+.top .logo{height:26px;width:auto}
+.seg{display:inline-flex;background:#fff;border:1px solid var(--bd);border-radius:999px;padding:4px;gap:2px}
+.seg button{border:0;border-radius:999px;padding:9px 16px;background:transparent;cursor:pointer;font-size:14px}
+.seg button.on{background:var(--ink);color:var(--lime);font-weight:700}
+.sel{height:42px;border:1px solid var(--bd);border-radius:999px;background:#fff;padding:0 14px;font-size:14px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid #DADBD6;background:#fff;border-radius:999px;padding:8px 14px;font-size:13.5px;cursor:pointer}
+.chip.on{border:2px solid var(--ink);font-weight:700;padding:7px 13px}
+.chip i{width:9px;height:9px;border-radius:50%;border:1px solid var(--ink)}
+.aviso{background:var(--warnL);border-radius:14px;padding:10px 14px;font-size:13.5px}
+.row{display:flex;flex-wrap:wrap;gap:16px}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:22px;padding:20px;min-width:0}
+.hd2{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.hd2 h2{margin:0;font-size:16px;font-weight:700;background:var(--lime);border-radius:10px;padding:7px 14px}
+.hd2 span{font-size:12.5px;color:var(--tx2)}
+/* destaque */
+.hero{flex:2 1 440px;min-width:0;background:var(--ink);border-radius:24px;padding:24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;position:relative;overflow:hidden;color:#fff}
+.hero .tri{position:absolute;top:0;right:0;width:140px;height:140px}
+.hero .l{font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--lime)}
+.hero .v{font-size:46px;font-weight:800;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums}
+.hero .v small{font-size:18px;color:#B5B8B0}
+.hero .s{font-size:14px;color:#C9CCC4;margin-top:6px;max-width:460px}
+.hero .tu{display:flex;gap:18px;margin-top:14px;font-size:13px;color:#E8EAE3;flex-wrap:wrap}.hero .tu b{color:#fff}
+.minis{flex:1 1 300px;min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.mini{background:#fff;border:1px solid var(--bd);border-radius:20px;padding:15px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.mini .h{display:flex;align-items:center;gap:8px}.mini .h span{width:32px;height:32px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex:none}
+.mini .h em{font-style:normal;font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em}
+.mini .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}.mini .v small{font-size:13px;color:var(--tx2);font-weight:600}
+.mini .s{font-size:12px;color:var(--tx2)}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
 .badge.good{background:var(--goodL);color:var(--good)}.badge.warn{background:var(--warnL);color:var(--warn)}.badge.crit{background:var(--critL);color:var(--crit)}
-.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
-.card{background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;min-width:0}
-.card h3{margin:0 0 2px;font-size:15px}
+/* grupos */
+.gcard{flex:1 1 250px;min-width:0;background:#fff;border:1px solid var(--bd);border-radius:20px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;text-align:left}
+.gcard.on{border:2px solid var(--ink);padding:15px}
+.gtag{font-size:12px;font-weight:800;border-radius:7px;padding:3px 8px}
+.gcard .n{font-size:14px;font-weight:700;margin-top:7px}.gcard .k{font-size:21px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums}.gcard .k small{font-size:12.5px;color:var(--tx2);font-weight:600}
+.gcard .d{font-size:12px;color:var(--tx2)}
+/* máquinas */
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.mt{background:#fff;border:1px solid var(--bd);border-radius:20px;padding:15px;display:flex;flex-direction:column;gap:11px;cursor:pointer;text-align:left;min-width:0}
+.mt:hover{border-color:var(--ink)}
+.mt .a{display:flex;justify-content:space-between;align-items:center;gap:8px}.mt .a b{font-size:16px}
+.mt .k{font-size:23px;font-weight:800;font-variant-numeric:tabular-nums}.mt .k small{font-size:12.5px;color:var(--tx2);font-weight:600}
+.mt .p{font-size:12.5px;font-weight:700}
+.mt .z{display:flex;justify-content:space-between;font-size:12px;color:var(--tx2)}.mt .z b{color:var(--ink);font-weight:600}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.st i{width:7px;height:7px;border-radius:50%}
+.st.on{background:var(--goodL);color:var(--good)}.st.on i{background:#4c8a00}
+.st.off{background:#EFEFEC;color:var(--tx2)}.st.off i{background:#A9ACA5}
+.prog{height:6px;background:var(--grid);border-radius:999px;overflow:hidden}.prog i{display:block;height:100%;border-radius:999px}
+.spark{display:flex;align-items:flex-end;gap:2px;height:38px}.spark i{display:block;width:5px;border-radius:3px 3px 1px 1px;min-height:2px}
+/* tabelas */
 .tw{overflow-x:auto}
-.card .sub{font-size:12.5px;color:var(--tx2);margin-bottom:8px}
-.legend{display:flex;gap:14px;font-size:12.5px;color:var(--tx2);margin:2px 0 6px;flex-wrap:wrap}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
-.sw.line{height:0;border-top:2px dashed var(--tx2);width:16px;border-radius:0}
-svg text{font-family:inherit}
 table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--tx2);text-align:left;padding:7px 8px;border-bottom:1px solid var(--bd)}
-td{padding:8px;border-bottom:1px solid var(--grid);white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2);text-align:left;padding:0 8px 10px;font-weight:700;white-space:nowrap}
+td{padding:10px 8px;border-top:1px solid var(--bd);white-space:nowrap}
 .num{text-align:right;font-variant-numeric:tabular-nums}
-.tip{position:fixed;pointer-events:none;background:var(--dark);color:#fff;font-size:12.5px;padding:7px 10px;border-radius:8px;opacity:0;transition:opacity .12s;z-index:9;max-width:260px;line-height:1.4}
-.tip b{color:var(--lime)}
-.gate{position:fixed;inset:0;background:rgba(28,30,26,.94);display:flex;align-items:center;justify-content:center;z-index:20}
-.gate .box{background:#fff;border-radius:14px;padding:26px;width:min(380px,92vw)}
-.gate h2{margin:0 0 6px;font-size:20px}
-.gate input{width:100%;height:46px;border:1px solid var(--bd);border-radius:9px;padding:0 12px;font-size:18px;margin:12px 0}
-.gate button{width:100%;height:48px;border:0;border-radius:10px;background:var(--lime);font-weight:700;font-size:16px;cursor:pointer}
+tr.clk{cursor:pointer}tr.clk:hover td{background:#FAFBF7}
+.tag{display:inline-block;font-size:10.5px;font-weight:800;border-radius:5px;padding:1px 6px;margin-right:6px;vertical-align:1px}
 .muted{color:var(--tx2);font-size:13px}
-.flash{animation:fl 1.2s}
-@keyframes fl{0%{background:var(--limeL)}100%{background:transparent}}
-.tabbtn{border:1px solid var(--bd);background:#fff;border-radius:8px;padding:4px 10px;font-size:12.5px;cursor:pointer;margin-left:6px}
-.logo{height:26px;width:auto;display:block}
-.gate input[type=checkbox]{width:auto;height:auto;margin:0}
-.mr{display:contents}
-@media(max-width:600px){.mg{grid-template-columns:1fr!important}.mr{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center}.mr .mb{grid-column:1/-1;order:3}}
-.gate .logo{height:30px;filter:invert(1);margin-bottom:14px}
-.grupos{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:14px}
-.gcard{background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;min-width:0;border-top:4px solid var(--dark)}
-.gcard.on{border-color:var(--limeD);box-shadow:0 0 0 2px var(--lime)}
-.gcard .gh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.gcard .gn{font-size:18px;font-weight:700}
-.gcard .gd{font-size:12px;color:var(--tx2);flex:1;min-width:0}
-.gcard .gv{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px}
-.gcard .gs{font-size:12.5px;color:var(--tx2)}
-.gcard table{font-size:12.5px;margin-top:8px}.gcard td{padding:5px 6px}
-.pct.good{color:var(--good);font-weight:600}.pct.warn{color:var(--warn);font-weight:600}.pct.crit{color:var(--crit);font-weight:600}
-.ef{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:4px 0 12px}.ef .kpi{padding:10px 12px}.ef .kpi .v{font-size:22px}
-.mini{height:8px;border-radius:4px;background:var(--grid);overflow:hidden;min-width:60px}.mini i{display:block;height:100%}
-@media(max-width:700px){.ef{grid-template-columns:repeat(2,1fr)}}
-.tag{display:inline-block;font-size:10.5px;font-weight:700;background:var(--dark);color:var(--lime);border-radius:4px;padding:1px 5px;margin-right:6px;vertical-align:1px}
-@media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi.hero{grid-column:1/-1}.grid{grid-template-columns:1fr}}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--tx2);margin:0 0 6px;flex-wrap:wrap}.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:11px;height:11px;border-radius:3px;display:inline-block}.sw.line{height:0;border-top:2px dashed var(--tx2);width:16px;border-radius:0}
+svg text{font-family:inherit}
+.mini2{height:8px;border-radius:999px;background:var(--grid);overflow:hidden;min-width:60px}.mini2 i{display:block;height:100%;border-radius:999px}
+.flash{animation:fl 1.2s}@keyframes fl{0%{background:var(--limeL)}100%{background:transparent}}
+/* painel lateral da máquina */
+.dw{position:fixed;inset:0;z-index:30;display:none}
+.dw.open{display:flex;justify-content:flex-end}
+.dw .bk{flex:1;background:rgba(17,17,17,.45);border:0;cursor:pointer}
+.dw aside{width:min(480px,100%);background:#fff;height:100%;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px;border-radius:24px 0 0 24px;box-shadow:-10px 0 40px rgba(0,0,0,.15)}
+.dw .x{width:44px;height:44px;border-radius:12px;border:1px solid var(--bd);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+.dw h2{margin:10px 0 0;font-size:28px;font-weight:800}
+.dw h3{margin:0 0 8px;font-size:15px;font-weight:700;display:inline-block;background:var(--lime);border-radius:9px;padding:5px 12px}
+.dkpi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.dkpi.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.dkpi div{background:var(--bg);border-radius:14px;padding:12px;min-width:0}.dkpi em{display:block;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--tx2)}
+.dkpi b{display:block;font-size:20px;font-weight:800;margin-top:4px}.dkpi span{font-size:11.5px;color:var(--tx2)}
+.dhero{background:var(--ink);border-radius:20px;padding:18px;display:flex;align-items:center;gap:18px;color:#fff}
+.kv{display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px 12px;font-size:13.5px}.kv span{color:var(--tx2)}
+.li{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:8px 0;border-top:1px solid var(--bd)}
+/* senha */
+.gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
+.gate .bx{background:#fff;border:1px solid var(--bd);border-radius:24px;padding:28px;width:min(400px,100%);position:relative;overflow:hidden}
+.gate .tri{position:absolute;top:0;right:0;width:90px;height:90px}
+.gate h2{margin:14px 0 4px;font-size:24px}
+.gate label{display:block;font-size:12.5px;color:var(--tx2);margin-top:14px}
+.gate input[type=password]{width:100%;height:50px;border:1px solid var(--bd);border-radius:12px;padding:0 14px;font-size:18px;margin-top:4px}
+.gate .go{width:100%;height:52px;border:0;border-radius:14px;background:var(--lime);font-weight:800;font-size:16px;cursor:pointer;margin-top:14px}
+.foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx2);padding:2px 4px;flex-wrap:wrap;gap:8px}
+.bar-lime{height:8px;background:var(--lime)}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:#fff;font-size:12.5px;padding:7px 10px;border-radius:9px;opacity:0;transition:opacity .12s;z-index:50;max-width:260px;line-height:1.4}.tip b{color:var(--lime)}
+@media(max-width:900px){
+ .side{position:static;max-width:none;flex-basis:100%;flex-direction:row;flex-wrap:wrap;align-items:center;border-radius:20px;padding:12px}
+ .brand{padding:0 8px 0 0}.nav{display:flex;gap:4px;overflow-x:auto;flex:1 1 100%;order:3}.nav a{white-space:nowrap;padding:9px 12px;font-size:13.5px}
+ .live{margin:0 0 0 auto;padding:8px 12px}.live div{display:none}
+ .app{padding:10px;gap:12px}.top h1{font-size:24px}.hero .v{font-size:36px}
+}
 </style>
 </head>
 <body>
-<div class="gate" id="gate"><div class="box"><img class="logo" src="logo.png" alt="Ambipar" onerror="this.remove()"><h2>Painel da Produção</h2><div class="muted">Acesso restrito à diretoria.</div>
-<input id="senha" type="password" placeholder="Senha" autocomplete="off"><button id="entrar">Entrar</button>
-<p class="muted" id="gmsg" style="margin:12px 0 0"></p></div></div>
-<div class="hd"><img class="logo" src="logo.png" alt="Ambipar" onerror="this.remove()"><div class="t">Painel da Produção · Diretoria</div><div class="live"><span class="dot"></span><span id="upd">Ao vivo</span></div></div>
-<div class="demo" id="aviso" style="display:none"></div>
-<div class="wrap">
-  <div class="filters">
-    <div class="seg" id="per"><button data-p="1" class="on">Hoje</button><button data-p="7">7 dias</button><button data-p="mes">Mês</button></div>
-    <select class="sel" id="fTurno"><option value="">Todos os turnos</option><option>1º</option><option>2º</option></select>
-    <select class="sel" id="fGrupo"><option value="">Todos os grupos</option></select>
-    <select class="sel" id="fMaq"><option value="">Todas as máquinas</option></select>
-  </div>
-  <div class="kpis" id="kpis"></div>
-  <div class="grupos" id="grupos"></div>
-  <div class="card" style="margin-bottom:14px"><h3>Eficiência e capacidade produtiva</h3><div class="sub" id="s7"></div><div id="c7"></div></div>
-  <div class="grid">
-    <div class="card"><h3 id="t1">Produção hora a hora</h3><div class="sub" id="s1"></div><div class="legend" id="lg1"></div><div id="c1"></div></div>
-    <div class="card"><h3>Produção por máquina</h3><div class="sub" id="s2">kg produzidos e meta do período</div><div id="c2"></div></div>
-    <div class="card"><h3>Ordens abertas agora <span class="muted" id="nab"></span></h3><div class="sub">Operadores lançando neste turno</div><div id="c3"></div></div>
-    <div class="card"><h3>Paradas por motivo</h3><div class="sub" id="s4">minutos no período</div><div id="c4"></div></div>
-    <div class="card"><h3>Por operador</h3><div class="sub">kg, horas lançadas e média por hora</div><div id="c5"></div></div>
-    <div class="card"><h3>Acondicionamento e conferência do PCP</h3><div class="sub">unidades produzidas no período e pendências do PCP</div><div id="c6"></div></div>
-  </div>
+<div class="gate" id="gate"><div class="bx"><svg class="tri" aria-hidden="true" viewBox="0 0 100 100"><polygon points="0,0 100,0 100,100" fill="#CDFF00"/></svg>
+<img src="logo_preto.png" alt="Ambipar" style="height:26px;width:auto" onerror="this.remove()">
+<h2>Painel da produção</h2><div class="muted">Acesso restrito à diretoria.</div>
+<label for="senha">Senha</label><input id="senha" type="password" autocomplete="off">
+<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="lembrar"> Lembrar neste aparelho</label>
+<button class="go" id="entrar" type="button">Entrar</button><p class="muted" id="gmsg" style="margin:12px 0 0"></p></div></div>
+
+<div class="app">
+<nav class="side" aria-label="Menu">
+ <div class="brand"><div class="mk"><img src="marca.png" alt="" onerror="this.remove()"></div><div><b>AMBIPAR</b><span>ERP Produção</span></div></div>
+ <div class="nav" id="nav">
+  <a href="#visao" class="on"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>Visão geral</a>
+  <a href="#maquinas"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="10" rx="2"/><path d="M7 9V5h10v4"/></svg>Máquinas</a>
+  <a href="#eficiencia"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>Eficiência</a>
+  <a href="#paradas"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="6" width="3.5" height="12" rx="1"/><rect x="13.5" y="6" width="3.5" height="12" rx="1"/></svg>Paradas</a>
+  <a href="#operadores"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Operadores</a>
+  <a href="#pcp"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 12l3 3 5-6"/></svg>Conferência PCP</a>
+ </div>
+ <div class="live"><b><span class="dot"></span>Ao vivo</b><div id="upd">atualiza a cada minuto</div></div>
+</nav>
+<main>
+ <div class="top" id="visao">
+  <div class="tt"><div class="dd" id="hoje"></div><h1>Visão geral da fábrica</h1></div>
+  <div class="seg" id="per" role="group" aria-label="Período"><button type="button" data-p="1" class="on">Hoje</button><button type="button" data-p="7">7 dias</button><button type="button" data-p="mes">Mês</button></div>
+  <select class="sel" id="fTurno" aria-label="Turno"><option value="">Todos os turnos</option><option>1º</option><option>2º</option></select>
+  <img class="logo" src="logo_preto.png" alt="Ambipar" onerror="this.remove()">
+ </div>
+ <div class="chips" id="fGrupos"></div>
+ <div class="aviso" id="aviso" style="display:none"></div>
+ <div class="row"><div class="hero" id="hero"></div><div class="minis" id="minis"></div></div>
+ <div class="row" id="grupos"></div>
+ <section class="box" id="maquinas"><div class="hd2"><h2>Máquinas</h2><span>clique numa máquina para ver tudo dela</span></div><div class="mgrid" id="mgrid"></div></section>
+ <div class="row">
+  <section class="box" style="flex:2 1 520px"><div class="hd2"><h2 id="t1">Fábrica hora a hora</h2><span id="s1"></span></div><div class="legend" id="lg1"></div><div id="c1"></div></section>
+  <section class="box" style="flex:1 1 300px" id="paradas"><div class="hd2"><h2>Paradas por motivo</h2><span id="s4"></span></div><div id="c4"></div></section>
+ </div>
+ <section class="box" id="eficiencia"><div class="hd2"><h2>Eficiência e capacidade</h2><span id="s7"></span></div><div id="c7"></div></section>
+ <div class="row">
+  <section class="box" style="flex:1 1 520px"><div class="hd2"><h2>Ordens abertas agora</h2><span id="nab"></span></div><div id="c3"></div></section>
+  <section class="box" style="flex:1 1 420px" id="operadores"><div class="hd2"><h2>Por operador</h2><span>kg, horas trabalhadas e média por hora</span></div><div id="c5"></div></section>
+ </div>
+ <section class="box" id="pcp"><div class="hd2"><h2>Acondicionamento e conferência do PCP</h2><span>unidades produzidas e pendências</span></div><div id="c6"></div></section>
+ <div class="foot"><span>AMBIPAR · ERP PRODUÇÃO · números da base tratada (já com as correções do PCP)</span><img src="logo_preto.png" alt="Ambipar" style="height:20px;width:auto" onerror="this.remove()"></div>
+</main>
 </div>
+<div class="bar-lime"></div>
+<div class="dw" id="dw"><button class="bk" type="button" aria-label="Fechar detalhes" data-fechar="1"></button><aside id="dwc" aria-label="Detalhes da máquina"></aside></div>
 <div class="tip" id="tip"></div>
 <script src="config.js" onerror="void 0"></script>
 <script>
@@ -130,6 +203,9 @@ async function carregar(){if(carregando)return;carregando=true;
 /* ---------- estado ---------- */
 let S={p:"1",tu:"",g:"",m:""};
 const $=s=>document.querySelector(s);
+/* horas = duração real de cada lançamento, arredondada a 0,1 h como na planilha (Duracao_h) */
+const hLin=r=>Math.round(((r.min||60))/6)/10;const hSoma=a=>Math.round(a.reduce((s,r)=>s+hLin(r),0)*10)/10;
+const fh=h=>(Number(h)||0).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1});
 const fmt=n=>Math.round(n).toLocaleString("pt-BR");
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
@@ -158,6 +234,7 @@ function opcoes(){const sg=$("#fGrupo"),sm=$("#fMaq");
   const ms=maqsDe(S.g,"");if(S.m&&!ms.includes(S.m))S.m="";
   sm.innerHTML=`<option value="">${S.g?"Todas as máquinas do "+esc(S.g):"Todas as máquinas"}</option>`+ms.map(m=>`<option${m===S.m?" selected":""}>${esc(m)}</option>`).join("")}
 function descGrupo(g){const ms=maqsDe(g,"");const pre=[...new Set(ms.map(m=>m.split(/[- ]/)[0]))];return pre.length?pre.join(", ")+" · "+ms.length+" máq.":"nenhuma máquina"}
+
 /* ---------- gráficos SVG ---------- */
 function vbars(el,items,opt){ // items: [{x,label,parts:[{v,c,name}]}]
   if(!items.some(i=>i.parts.some(p=>p.v))){el.innerHTML=`<p class="muted" style="margin:18px 0">Sem produção lançada no período.</p>`;return}
@@ -180,6 +257,7 @@ function hbars(el,items,unit,color){const max=Math.max(...items.map(i=>i.v),1);
     <div class="num">${fmt(i.v)} ${unit}</div>`).join("")+`</div>`:`<p class="muted">Sem dados no filtro.</p>`}
 function rbar(x,y,w,h,r){r=Math.min(r,h,w/2);return `M${x},${y+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h}Z`}
 function niceStep(v){const p=Math.pow(10,Math.floor(Math.log10(v||1)));const n=v/p;return (n<1.5?1:n<3?2:n<7?5:10)*p}
+
 /* ---------- render ---------- */
 function barrasPeriodo(L,ref,h){ // hora a hora (hoje) ou por dia
   if(S.p==="1"){const hs=[];const hmin=Math.min(H_INI,...L.map(r=>r.h)),hmax=Math.max(H_FIM-1,...L.map(r=>r.h));for(let x=hmin;x<=hmax;x++)hs.push(x);
@@ -188,112 +266,148 @@ function barrasPeriodo(L,ref,h){ // hora a hora (hoje) ou por dia
   const ds=[];for(let d=inicioPer();d<=TODAY;d=addD(d,1))if(produz(d)||L.some(r=>r.d===d))ds.push(d);
   return{items:ds.map(d=>({label:d.slice(8)+"/"+d.slice(5,7),parts:[{v:L.filter(r=>r.d===d&&r.tu==="1º").reduce((s,r)=>s+r.kg,0),c:"var(--s1)",name:"1º turno"},{v:L.filter(r=>r.d===d&&r.tu==="2º").reduce((s,r)=>s+r.kg,0),c:"var(--s2)",name:"2º turno"}]})),
     opt:{ref,refLabel:"meta do dia",h,aria:"Produção por dia"}}}
+
+/* ======================= PAINEL MODERNO (layout novo) ======================= */
+const GCOR={G1:"#9CC800",G2:"#111111",G3:"#8E918A"};
+const gCor=g=>GCOR[g]||"#B5B8B0";
+const gTag=g=>g==="Sem grupo"?"":`<span class="tag" style="background:${g==="G1"?"var(--lime)":gCor(g)};color:${g==="G1"?"var(--ink)":"#fff"}">${esc(g)}</span>`;
+const pct0=v=>Math.round(v);
+function donut(p,size,stroke,cor,trilho,txt,sub){const r=(size-stroke)/2,c=2*Math.PI*r,d=Math.min(Math.max(p,0),100)/100*c;
+  return `<div style="position:relative;width:${size}px;height:${size}px;flex:none"><svg role="img" aria-label="${pct0(p)}% da meta" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="display:block;transform:rotate(-90deg)"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${trilho}" stroke-width="${stroke}"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${cor}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${d} ${c}"/></svg>
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:${Math.round(size*.23)}px;font-weight:800;color:${txt};line-height:1">${pct0(p)}%</span>${sub?`<span style="font-size:11px;color:${txt};opacity:.7;margin-top:3px">${sub}</span>`:""}</div></div>`}
+const ICO={kg:'<path d="M4 20h16M6 20V10l6-6 6 6v10"/>',ef:'<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',h:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',par:'<rect x="7" y="6" width="3.5" height="12" rx="1"/><rect x="13.5" y="6" width="3.5" height="12" rx="1"/>',pcp:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 12l3 3 5-6"/>',x:'<path d="M6 6l12 12M18 6L6 18"/>'};
+const ico=(k,s=17,c="#111")=>`<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
+function badgeDe(r){return r>=98?`<span class="badge good">✓ no ritmo</span>`:r>=85?`<span class="badge warn">▲ um pouco abaixo</span>`:`<span class="badge crit">▼ abaixo do ritmo</span>`}
+function corPct(p){return p>=95?"var(--good)":p>=80?"var(--warn)":"var(--crit)"}
+/* sequência curta (hora a hora hoje; por dia nos outros períodos) para os mini gráficos */
+function serie(Lm){if(S.p==="1"){const out=[];for(let h=H_INI;h<H_FIM;h++)out.push(Lm.filter(r=>r.h===h).reduce((s,r)=>s+r.kg,0));return out}
+  const out=[];for(let d=inicioPer();d<=TODAY;d=addD(d,1))if(produz(d)||Lm.some(r=>r.d===d))out.push(Lm.filter(r=>r.d===d).reduce((s,r)=>s+r.kg,0));return out.slice(-16)}
+function spark(v,cor,H=38,w=5){const mx=Math.max(1,...v);return `<div class="spark" aria-hidden="true" style="height:${H}px">${v.map(x=>`<i style="height:${Math.max(2,Math.round(x/mx*H))}px;width:${w}px;background:${cor}"></i>`).join("")}</div>`}
+function opcoes(){} /* filtros agora são os chips de grupo (render) */
+let EM={};
 function render(){
   const L=H.filter(dentro),PA=P.filter(dentro);const tot=L.reduce((s,r)=>s+r.kg,0);
   const D=diasPer(),mD=metaDia(S.g,S.m);const metaTot=mD*D.tot,metaEsp=mD*D.esp;
   const pct=metaTot?tot/metaTot*100:0,ritmo=metaEsp?tot/metaEsp*100:100;
   const t1=L.filter(r=>r.tu==="1º").reduce((s,r)=>s+r.kg,0),t2=tot-t1;const par=PA.reduce((s,p)=>s+p.min,0);
-  const pend=L.filter(r=>r.st!=="Validado"&&r.st!=="Corrigido").length;const ab=Object.values(abertas).filter(o=>(!S.tu||o.tu===S.tu)&&(!S.g||grupoDe(o.m)===S.g)&&(!S.m||o.m===S.m));
+  const ab=Object.values(abertas).filter(o=>(!S.tu||o.tu===S.tu)&&(!S.g||grupoDe(o.m)===S.g)&&(!S.m||o.m===S.m));
   const per=S.p==="1"?"hoje":S.p==="7"?"nos últimos 7 dias":"em "+MESES[+TODAY.slice(5,7)-1];
+  const metaTxt=S.p==="1"?"meta do dia":S.p==="7"?"meta dos 7 dias":"meta do mês até hoje";
   const escopo=S.m?" · "+S.m:S.g?" · "+S.g:"";
-  const metaTxt=S.p==="1"?"meta do dia":S.p==="7"?"meta acumulada dos 7 dias":"meta acumulada do mês até hoje";
-  $("#kpis").innerHTML=`<div class="kpi hero"><div class="l">Produção ${per}${esc(escopo)}${mD?badgeDe(ritmo):""}</div><div class="v">${fmt(tot)} kg</div>
-     ${mD?`<div class="bar" data-tip="<b>${metaTxt}</b><br>${fmt(metaTot)} kg<br>Atingido: ${pct.toFixed(0)}%"><i style="width:${Math.min(100,pct)}%"></i></div>
-     <div class="s">${pct.toFixed(0)}% da ${metaTxt} (${fmt(metaTot)} kg) · esperado até agora: ${fmt(metaEsp)} kg${S.p==="mes"?` · meta do mês inteiro: ${fmt(mD*diasMes())} kg`:""}</div>`:`<div class="s">Sem meta: preencha MetaDiaKg na aba CAD_Maquinas.</div>`}</div>
-   <div class="kpi"><div class="l">1º turno</div><div class="v">${fmt(t1)}</div><div class="s">kg</div></div>
-   <div class="kpi"><div class="l">2º turno</div><div class="v">${fmt(t2)}</div><div class="s">kg</div></div>
-   <div class="kpi"><div class="l">Horas lançadas</div><div class="v">${L.length}</div><div class="s">${fmt(tot/(L.length||1))} kg por hora</div></div>
-   <div class="kpi"><div class="l">Paradas</div><div class="v">${fmt(par)}</div><div class="s">minutos · ${PA.length} ocorrência(s)</div></div>
-   <div class="kpi"><div class="l">Aguardando PCP</div><div class="v">${pend}</div><div class="s">horas sem conferência</div></div>`;
-  // blocos por grupo
+  const dd=dt(TODAY);$("#hoje").textContent=dd.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"})+" · "+pad(HNOW)+":"+pad(MNOW)+(S.tu?" · "+S.tu+" turno":"");
+  /* chips de grupo */
   const GS=grupos().filter(g=>g!=="Sem grupo"||H.some(r=>noPer(r)&&grupoDe(r.m)==="Sem grupo"));
-  $("#grupos").innerHTML=GS.map((g,i)=>{const Lg=H.filter(r=>noPer(r)&&grupoDe(r.m)===g);const kg=Lg.reduce((s,r)=>s+r.kg,0);
-    const md=metaDia(g,""),mt=md*D.tot,me=md*D.esp,pc=mt?kg/mt*100:0,rt=me?kg/me*100:100;
-    const pm={};Lg.forEach(r=>pm[r.m]=(pm[r.m]||0)+r.kg);
-    const todas=[...new Set(maqsDe(g,"").concat(Object.keys(pm)))];const ms=todas.filter(m=>pm[m]||(MI[m]&&MI[m].meta)).sort((a,b)=>(pm[b]||0)-(pm[a]||0));
-    const paradas=todas.filter(m=>!ms.includes(m));
-    return `<div class="gcard${S.g===g?" on":""}" data-grupo="${esc(g)}" style="cursor:pointer" title="Clique para filtrar ${esc(g)}"><div class="gh"><span class="gn">${esc(g)}</span><span class="gd">${esc(descGrupo(g))}</span>${md?badgeDe(rt):""}</div>
-      <div class="gv">${fmt(kg)} kg</div>
-      ${md?`<div class="bar"><i style="width:${Math.min(100,pc)}%"></i></div><div class="gs">${pc.toFixed(0)}% da ${metaTxt} (${fmt(mt)} kg)</div>`:`<div class="gs">sem meta cadastrada</div>`}
-      <div id="gc${i}" style="margin-top:6px"></div>
-      <table><thead><tr><th>Máquina</th><th class="num">kg</th><th class="num">Meta</th><th class="num">%</th></tr></thead><tbody>${ms.map(m=>{const mm=((MI[m]&&MI[m].meta)||0)*(S.tu?0.5:1)*D.tot,v=pm[m]||0;const pp=mm?v/mm*100:null;
-        return `<tr><td>${esc(m)}</td><td class="num">${fmt(v)}</td><td class="num">${mm?fmt(mm):"—"}</td><td class="num">${pp===null?"—":`<span class="pct ${ritmoCls(pp/(D.esp/D.tot||1))}">${pp.toFixed(0)}%</span>`}</td></tr>`}).join("")}</tbody></table>${paradas.length?`<div class="gs" style="margin-top:6px" title="${esc(paradas.join(", "))}">+ ${paradas.length} máquina(s) sem produção e sem meta no período</div>`:""}</div>`}).join("");
-  GS.forEach((g,i)=>{const Lg=H.filter(r=>noPer(r)&&grupoDe(r.m)===g);const b=barrasPeriodo(Lg,metaDia(g,""),150);vbars($("#gc"+i),b.items,b.opt)});
-  // eficiência e capacidade
-  const hPlan=(HORAS_DIA||16)*D.esp*(S.tu?0.5:1); // horas planejadas por máquina até agora
-  const PAp=P.filter(noPer);
+  $("#fGrupos").innerHTML=`<button type="button" class="chip${S.g?"":" on"}" data-g="">Todos</button>`+GS.map(g=>`<button type="button" class="chip${S.g===g?" on":""}" data-g="${esc(g)}"><i style="background:${g==="G1"?"var(--lime)":gCor(g)}"></i>${esc(g)}</button>`).join("");
+  /* destaque */
+  $("#hero").innerHTML=`<svg class="tri" aria-hidden="true" viewBox="0 0 100 100"><polygon points="0,0 100,0 100,100" fill="#CDFF00"/></svg>
+    ${mD?donut(pct,148,14,"#CDFF00","#2A2C27","#fff","da meta"):""}
+    <div style="min-width:210px;position:relative"><div class="l">Produção ${per}${esc(escopo)}</div><div class="v">${fmt(tot)}<small> kg</small></div>
+    <div class="s">${mD?`${metaTxt}: ${fmt(metaTot)} kg · ${tot<metaTot?"faltam "+fmt(metaTot-tot)+" kg":"meta batida"} · esperado até agora ${fmt(metaEsp)} kg${S.p==="mes"?` · mês inteiro ${fmt(mD*diasMes())} kg`:""}`:"Sem meta: preencha MetaDiaKg na aba CAD_Maquinas."}</div>
+    <div class="tu">${S.tu!=="2º"?`<span><b>${fmt(t1)}</b> kg 1º turno</span>`:""}${S.tu!=="1º"?`<span><b>${fmt(t2)}</b> kg 2º turno</span>`:""}${mD?badgeDe(ritmo):""}</div></div>`;
+  /* eficiência (mesmo cálculo do painel anterior) */
+  const hPlan=(HORAS_DIA||16)*D.esp*(S.tu?0.5:1);const PAp=P.filter(noPer);
   const em=[...new Set(maqsDe(S.g,S.m).concat(L.map(r=>r.m)))].map(m=>{const Lm=L.filter(r=>r.m===m);const kg=Lm.reduce((s,r)=>s+r.kg,0);
-      const hp=Lm.reduce((s,r)=>s+(r.min||60),0)/60,hpar=PAp.filter(p=>p.m===m&&(!S.g||grupoDe(p.m)===S.g)).reduce((s,p)=>s+p.min,0)/60;const cap=(MI[m]&&MI[m].cap)||0;
+      const hp=Lm.reduce((s,r)=>s+(r.min||60),0)/60,hpar=PAp.filter(p=>p.m===m).reduce((s,p)=>s+p.min,0)/60;const cap=(MI[m]&&MI[m].cap)||0;
       const capPer=cap*hPlan;return{m,g:grupoDe(m),cap,kg,hp,hpar,kgh:hp?kg/hp:0,desemp:cap&&hp?kg/hp/cap*100:null,disp:hPlan?hp/hPlan*100:null,efic:capPer?kg/capPer*100:null,capPer}})
     .filter(x=>x.kg||x.cap).sort((a,b)=>a.g.localeCompare(b.g)||(b.efic??-1)-(a.efic??-1));
+  EM={};em.forEach(x=>EM[x.m]=x);
   const comCap=em.filter(x=>x.cap);const capTot=comCap.reduce((s,x)=>s+x.capPer,0),kgCap=comCap.reduce((s,x)=>s+x.kg,0),hpCap=comCap.reduce((s,x)=>s+x.hp,0);
   const efG=capTot?kgCap/capTot*100:null,dispG=comCap.length&&hPlan?hpCap/(hPlan*comCap.length)*100:null,desG=hpCap?kgCap/comCap.reduce((s,x)=>s+x.cap*x.hp,0)*100:null;
-  const cor=v=>v===null?"var(--grid)":v>=85?"var(--good)":v>=65?"var(--warn)":"var(--crit)";const pf=v=>v===null?"—":v.toFixed(0)+"%";
-  const mini=v=>v===null?"—":`<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end"><div class="mini" style="width:70px"><i style="width:${Math.min(100,v)}%;background:${cor(v)}"></i></div><b style="color:${cor(v)};min-width:38px;text-align:right">${pf(v)}</b></div>`;
-  $("#s7").textContent=`Capacidade = kg/hora nominal da máquina (coluna CapacidadeKgH em CAD_Maquinas) × ${fmt(hPlan)} h planejadas por máquina no período${escopo}`;
-  $("#c7").innerHTML=(comCap.length?`<div class="ef">
-      <div class="kpi" data-tip="<b>Eficiência</b><br>produzido ÷ capacidade do período<br>(= disponibilidade × desempenho)"><div class="l">Eficiência geral</div><div class="v" style="color:${cor(efG)}">${pf(efG)}</div><div class="s">${fmt(kgCap)} de ${fmt(capTot)} kg possíveis</div></div>
-      <div class="kpi" data-tip="<b>Disponibilidade</b><br>horas produzindo ÷ horas planejadas"><div class="l">Disponibilidade</div><div class="v">${pf(dispG)}</div><div class="s">${fmt(hpCap)} h produzindo</div></div>
-      <div class="kpi" data-tip="<b>Desempenho</b><br>kg/h real ÷ kg/h da capacidade, nas horas em que produziu"><div class="l">Desempenho</div><div class="v">${pf(desG)}</div><div class="s">ritmo enquanto produz</div></div>
-      <div class="kpi" data-tip="<b>Capacidade ociosa</b><br>o que ainda caberia no período"><div class="l">Capacidade ociosa</div><div class="v">${fmt(Math.max(0,capTot-kgCap))}</div><div class="s">kg não produzidos</div></div></div>`:
-    `<p class="warn" style="background:var(--warnL);border-radius:8px;padding:9px 12px;font-size:13px">Preencha a coluna <b>CapacidadeKgH</b> (kg por hora que cada máquina produz rodando normal) na aba CAD_Maquinas para calcular a eficiência.</p>`)+
-    (em.length?`<div class="tw"><table><thead><tr><th>Máquina</th><th class="num">Capacidade kg/h</th><th class="num">kg/h real</th><th class="num">Horas produzindo</th><th class="num">Horas paradas</th><th class="num">Capacidade do período</th><th class="num">Produzido</th><th class="num">Disponib.</th><th class="num">Desempenho</th><th class="num">Eficiência</th></tr></thead><tbody>`+
-    em.map(x=>`<tr><td><span class="tag">${esc(x.g==="Sem grupo"?"—":x.g)}</span>${esc(x.m)}</td><td class="num">${x.cap?fmt(x.cap):"—"}</td><td class="num">${x.hp?fmt(x.kgh):"—"}</td><td class="num">${x.hp.toFixed(1).replace(".",",")}</td><td class="num">${x.hpar?x.hpar.toFixed(1).replace(".",","):"0"}</td>
-      <td class="num">${x.cap?fmt(x.capPer)+" kg":"—"}</td><td class="num"><b>${fmt(x.kg)}</b> kg</td><td class="num">${x.cap?pf(x.disp):"—"}</td><td class="num">${pf(x.desemp)}</td><td class="num">${mini(x.efic)}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="muted">Sem dados no filtro.</p>`);
-  // gráfico principal
-  const c1=$("#c1");const bp=barrasPeriodo(L,mD,240);
-  $("#t1").textContent=S.p==="1"?"Produção hora a hora — hoje":"Produção por dia";$("#s1").textContent=(S.p==="1"?"kg por hora, por turno":"kg por dia, por turno")+escopo;
-  vbars(c1,bp.items,bp.opt);
-  $("#lg1").innerHTML=(S.tu!=="2º"?`<span><i class="sw" style="background:var(--s1)"></i>1º turno</span>`:"")+(S.tu!=="1º"?`<span><i class="sw" style="background:var(--s2)"></i>2º turno</span>`:"")+`${mD?`<span><i class="sw line"></i>meta</span>`:""}`;
-  // por máquina com meta
+  const pf=v=>v===null?"—":v.toFixed(0)+"%";const cor=v=>v===null?"var(--grid)":v>=85?"#4c8a00":v>=65?"#d98a00":"#c62828";
+  const conf=L.filter(r=>r.st!=="Validado"&&r.st!=="Corrigido").length;
+  const mini=(k,r,v,u,s,tip)=>`<div class="mini"${tip?` data-tip="${tip}"`:""}><div class="h"><span>${ico(k)}</span><em>${r}</em></div><div class="v">${v}<small> ${u}</small></div><div class="s">${s}</div></div>`;
+  $("#minis").innerHTML=mini("ef","Eficiência",efG===null?"—":efG.toFixed(0),efG===null?"":"%",efG===null?"cadastre CapacidadeKgH":`disponib. ${pf(dispG)} · desemp. ${pf(desG)}`,"<b>Eficiência</b><br>produzido ÷ capacidade do período")+
+    mini("h","Horas",fh(hSoma(L)),"h",`${L.length} lançamento(s) · ${fmt(tot/(hSoma(L)||1))} kg/h`)+
+    mini("par","Paradas",fmt(par),"min",`${PA.length} ocorrência(s)`)+
+    mini("pcp","PCP",PCP.conf,"h",`aguardando conferência${PCP.ped.length?" · "+PCP.ped.length+" pedido(s) de correção":""}`);
+  /* grupos com anel */
+  $("#grupos").innerHTML=GS.map(g=>{const Lg=H.filter(r=>noPer(r)&&grupoDe(r.m)===g);const kg=Lg.reduce((s,r)=>s+r.kg,0);
+    const md=metaDia(g,""),mt=md*D.tot,me=md*D.esp,pc=mt?kg/mt*100:0;
+    return `<button type="button" class="gcard${S.g===g?" on":""}" data-g="${esc(g)}" aria-label="Filtrar ${esc(g)}">${md?donut(pc,82,10,gCor(g),"#EEEFEA","#111"):""}
+      <div style="min-width:0"><span class="gtag" style="background:${g==="G1"?"var(--lime)":gCor(g)};color:${g==="G1"?"var(--ink)":"#fff"}">${esc(g)}</span>${md?" "+badgeDe(me?kg/me*100:100):""}
+      <div class="n">${esc(descGrupo(g))}</div><div class="k">${fmt(kg)} <small>${md?"/ "+fmt(mt)+" kg":"kg"}</small></div></div></button>`}).join("");
+  /* máquinas */
   const pm={};L.forEach(r=>pm[r.m]=(pm[r.m]||0)+r.kg);
+  const abM={};Object.values(abertas).forEach(o=>{if(o.d===TODAY)abM[o.m]=o});
   const lm=[...new Set(maqsDe(S.g,S.m).concat(Object.keys(pm)))].map(m=>({m,g:grupoDe(m),v:pm[m]||0,meta:((MI[m]&&MI[m].meta)||0)*(S.tu?0.5:1)*D.tot}))
-    .filter(x=>x.v||x.meta).sort((a,b)=>a.g.localeCompare(b.g)||b.v-a.v);
-  const mx=Math.max(1,...lm.map(x=>Math.max(x.v,x.meta)));
-  $("#s2").textContent="kg produzidos e "+metaTxt+(temMetaMaq()?"":" (cadastre MetaDiaKg em CAD_Maquinas)");
-  $("#c2").innerHTML=lm.length?`<div class="mg" style="display:grid;grid-template-columns:minmax(120px,180px) 1fr auto;gap:8px 10px;align-items:center;font-size:13px">`+lm.map(x=>{const pc=x.meta?x.v/x.meta*100:null;
-    return `<div class="mr"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(x.m)}"><span class="tag">${esc(x.g==="Sem grupo"?"—":x.g)}</span>${esc(x.m)}</div>
-    <div class="mb" data-tip="<b>${esc(x.m)}</b><br>Produzido: ${fmt(x.v)} kg${x.meta?"<br>Meta: "+fmt(x.meta)+" kg<br>Atingido: "+pc.toFixed(0)+"%":"<br>sem meta"}${MAT[x.m]?"<br>"+esc(MAT[x.m]):""}" style="height:16px;background:var(--grid);border-radius:4px;position:relative">
-      <div style="position:absolute;left:0;top:0;bottom:0;width:${x.v/mx*100}%;background:var(--s1);border-radius:4px"></div>${x.meta?`<div style="position:absolute;top:-3px;bottom:-3px;left:calc(${x.meta/mx*100}% - 1px);width:2px;background:var(--dark)"></div>`:""}</div>
-    <div class="num">${fmt(x.v)}${x.meta?` / ${fmt(x.meta)} kg <span class="pct ${ritmoCls(pc/(D.esp/D.tot||1))}">${pc.toFixed(0)}%</span>`:" kg"}</div></div>`}).join("")+`</div><p class="muted" style="margin:10px 0 0">Barra = produzido · traço escuro = meta</p>`:`<p class="muted">Sem dados no filtro.</p>`;
-  // ordens abertas
-  $("#nab").textContent=`(${ab.length})`;
+    .filter(x=>x.v||x.meta||abM[x.m]).sort((a,b)=>a.g.localeCompare(b.g)||b.v-a.v);
+  $("#mgrid").innerHTML=lm.length?lm.map(x=>{const pc=x.meta?x.v/x.meta*100:null;const on=!!abM[x.m];const cg=x.g==="G1"?"#9CC800":gCor(x.g);
+    return `<button type="button" class="mt" data-maq="${esc(x.m)}" aria-label="Ver detalhes da ${esc(x.m)}">
+      <div class="a"><b>${esc(x.m)}</b><span class="st ${on?"on":"off"}"><i></i>${on?"ordem aberta":"sem ordem aberta"}</span></div>
+      <div class="a" style="align-items:flex-end"><div><div class="k">${fmt(x.v)}<small> kg</small></div><div class="p" style="color:${pc===null?"var(--tx2)":corPct(pc/(D.esp/D.tot||1))}">${pc===null?"sem meta":pc.toFixed(0)+"% da meta"}</div></div>${spark(serie(L.filter(r=>r.m===x.m)),cg)}</div>
+      ${pc!==null?`<div class="prog"><i style="width:${Math.min(100,pc)}%;background:${cg}"></i></div>`:""}
+      <div class="z"><span>${x.g==="Sem grupo"?"sem grupo":esc(x.g)}${on?" · "+esc(String(abM[x.m].op).split(" ")[0]):""}</span><b>detalhes ›</b></div></button>`}).join(""):`<p class="muted">Sem máquinas com produção ou meta no filtro.</p>`;
+  /* gráfico principal */
+  const bp=barrasPeriodo(L,mD,240);$("#t1").textContent=S.p==="1"?"Fábrica hora a hora":"Produção por dia";$("#s1").textContent=(S.p==="1"?"kg por hora, por turno":"kg por dia, por turno")+escopo;
+  vbars($("#c1"),bp.items,bp.opt);
+  $("#lg1").innerHTML=(S.tu!=="2º"?`<span><i class="sw" style="background:var(--s1)"></i>1º turno</span>`:"")+(S.tu!=="1º"?`<span><i class="sw" style="background:var(--s2)"></i>2º turno</span>`:"")+(mD?`<span><i class="sw line"></i>meta</span>`:"");
+  /* paradas */
+  const pp={};PA.forEach(p=>pp[p.mot]=(pp[p.mot]||0)+p.min);$("#s4").textContent=fmt(par)+" min "+per;
+  hbars($("#c4"),Object.entries(pp).sort((a,b)=>b[1]-a[1]).map(([m,v])=>({label:m,v})),"min","var(--ink)");
+  /* eficiência (tabela; clique abre a máquina) */
+  $("#s7").textContent=`capacidade = CapacidadeKgH × ${fmt(hPlan)} h planejadas por máquina${escopo}`;
+  const mini2=v=>v===null?"—":`<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end"><div class="mini2" style="width:70px"><i style="width:${Math.min(100,v)}%;background:${cor(v)}"></i></div><b style="min-width:38px;text-align:right">${pf(v)}</b></div>`;
+  $("#c7").innerHTML=(comCap.length?`<div class="row" style="margin-bottom:14px">${[["Eficiência geral",pf(efG),`${fmt(kgCap)} de ${fmt(capTot)} kg possíveis`],["Disponibilidade",pf(dispG),`${fh(hpCap)} h produzindo`],["Desempenho",pf(desG),"ritmo enquanto produz"],["Capacidade ociosa",fmt(Math.max(0,capTot-kgCap))+" kg","não produzidos"]].map(a=>`<div class="mini" style="flex:1 1 180px"><div class="h"><em>${a[0]}</em></div><div class="v">${a[1]}</div><div class="s">${a[2]}</div></div>`).join("")}</div>`
+     :`<div class="aviso" style="margin-bottom:12px">Preencha a coluna <b>CapacidadeKgH</b> na aba CAD_Maquinas para calcular a eficiência.</div>`)+
+    (em.length?`<div class="tw"><table><thead><tr><th>Máquina</th><th class="num">Capac. kg/h</th><th class="num">kg/h real</th><th class="num">h produzindo</th><th class="num">h paradas</th><th class="num">Produzido</th><th class="num">Disponib.</th><th class="num">Desempenho</th><th class="num">Eficiência</th></tr></thead><tbody>`+
+      em.map(x=>`<tr class="clk" data-maq="${esc(x.m)}"><td>${gTag(x.g)}<b>${esc(x.m)}</b></td><td class="num">${x.cap?fmt(x.cap):"—"}</td><td class="num">${x.hp?fmt(x.kgh):"—"}</td><td class="num">${fh(x.hp)}</td><td class="num">${fh(x.hpar)}</td><td class="num"><b>${fmt(x.kg)}</b> kg</td><td class="num">${x.cap?pf(x.disp):"—"}</td><td class="num">${pf(x.desemp)}</td><td class="num">${mini2(x.efic)}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="muted">Sem dados no filtro.</p>`);
+  /* ordens abertas */
+  $("#nab").textContent=ab.length+" ordem(ns)";
   $("#c3").innerHTML=ab.length?`<div class="tw"><table><thead><tr><th>Ordem</th><th>Operador</th><th>Máquina</th><th class="num">Horas</th><th class="num">kg</th><th>Última hora</th></tr></thead><tbody>`+
-    ab.map(o=>{const ls=H.filter(r=>r.ord===o.ord&&r.d===o.d);const ult=ls.length?Math.max(...ls.map(r=>r.h)):null;return `<tr id="r-${o.ord}"><td><b>${o.ord}</b></td><td>${esc(o.op)}</td><td><span class="tag">${esc(grupoDe(o.m)==="Sem grupo"?"—":grupoDe(o.m))}</span>${esc(o.m)}</td><td class="num">${ls.length}</td><td class="num">${fmt(ls.reduce((s,r)=>s+r.kg,0))}</td><td>${ult===null?"—":pad(ult)+":00–"+pad(ult+1)+":00"}</td></tr>`}).join("")+`</tbody></table></div>`:`<p class="muted">Nenhuma ordem aberta agora.</p>`;
-  // paradas
-  const pp={};PA.forEach(p=>pp[p.mot]=(pp[p.mot]||0)+p.min);
-  hbars($("#c4"),Object.entries(pp).sort((a,b)=>b[1]-a[1]).map(([m,v])=>({label:m,v})),"min","var(--s2)");
-  // operador
-  const po={};L.forEach(r=>{const o=po[r.op]||(po[r.op]={op:r.op,tu:r.tu,kg:0,h:0});o.kg+=r.kg;o.h++});
-  const lo=Object.values(po).sort((a,b)=>b.kg-a.kg);
-  $("#c5").innerHTML=lo.length?`<div class="tw"><table><thead><tr><th>Operador</th><th>Turno</th><th class="num">kg</th><th class="num">Horas</th><th class="num">kg/h</th></tr></thead><tbody>`+lo.map(o=>`<tr><td>${esc(o.op)}</td><td>${o.tu}</td><td class="num"><b>${fmt(o.kg)}</b></td><td class="num">${o.h}</td><td class="num">${fmt(o.kg/o.h)}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="muted">Sem dados.</p>`;
-  // acondicionamento + conferência
+    ab.map(o=>{const ls=H.filter(r=>r.ord===o.ord&&r.d===o.d);const ult=ls.length?Math.max(...ls.map(r=>r.h)):null;return `<tr class="clk" id="r-${o.ord}" data-maq="${esc(o.m)}"><td><b>${o.ord}</b></td><td>${esc(o.op)}</td><td>${gTag(grupoDe(o.m))}${esc(o.m)}</td><td class="num">${fh(hSoma(ls))}</td><td class="num">${fmt(ls.reduce((s,r)=>s+r.kg,0))}</td><td>${ult===null?"—":`<span class="st on"><i></i>${pad(ult)}:00–${pad(ult+1)}:00</span>`}</td></tr>`}).join("")+`</tbody></table></div>`:`<p class="muted">Nenhuma ordem aberta agora.</p>`;
+  /* operadores */
+  const po={};L.forEach(r=>{const o=po[r.op]||(po[r.op]={op:r.op,tu:r.tu,kg:0,h:0});o.kg+=r.kg;o.h+=hLin(r)});const lo=Object.values(po).sort((a,b)=>b.kg-a.kg);
+  $("#c5").innerHTML=lo.length?`<div class="tw"><table><thead><tr><th>Operador</th><th>Turno</th><th class="num">kg</th><th class="num">Horas</th><th class="num">kg/h</th></tr></thead><tbody>`+lo.map(o=>`<tr><td>${esc(o.op)}</td><td>${o.tu}</td><td class="num"><b>${fmt(o.kg)}</b></td><td class="num">${fh(o.h)}</td><td class="num">${o.h?fmt(o.kg/o.h):"—"}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="muted">Sem dados.</p>`;
+  /* acondicionamento + conferência */
   const ac={};L.forEach(r=>ac[r.ac]=(ac[r.ac]||0)+r.q);
-  const val=L.filter(r=>r.st==="Validado").length,nCor=L.filter(r=>r.cor||r.st==="Corrigido").length,emc=L.filter(r=>r.st==="Em conferência").length,ped=L.filter(r=>r.ped&&r.st!=="Validado").length;
-  const br=d=>d?d.slice(8)+"/"+d.slice(5,7):"";
-  const pedF=PCP.ped.filter(x=>(!S.g||grupoDe(x.m)===S.g)&&(!S.m||x.m===S.m)).sort((a,b)=>a.d.localeCompare(b.d));
-  $("#c6").innerHTML=`${Object.keys(ac).length?`<table><tbody>${Object.entries(ac).sort((a,b)=>b[1]-a[1]).map(([a,v])=>`<tr><td>${esc(a)}</td><td class="num"><b>${fmt(v)}</b> un.</td></tr>`).join("")}</tbody></table>`:`<p class="muted">Sem lançamentos no período.</p>`}
-    <div style="margin-top:12px;font-size:13px"><b>Conferência no período</b> <span class="muted">(horas lançadas)</span></div>
-    <table><tbody>
-      <tr><td>✓ Validadas</td><td class="num">${val} h</td></tr>
-      <tr><td>✎ Corrigidas pelo PCP</td><td class="num">${nCor} h</td></tr>
-      <tr><td>… Em conferência</td><td class="num">${emc} h</td></tr>
-      <tr><td>⚑ Com pedido de correção aberto</td><td class="num">${ped} h</td></tr></tbody></table>
-    <div style="margin-top:12px;font-size:13px"><b>Pendências do PCP</b> <span class="muted">(todos os dias)</span></div>
-    <table><tbody>
-      <tr><td>Horas aguardando conferência</td><td class="num"><b>${PCP.conf}</b> h${PCP.confDesde?` <span class="muted">desde ${br(PCP.confDesde)}</span>`:""}</td></tr>
-      <tr><td>Pedidos de correção abertos</td><td class="num"><b style="color:${PCP.ped.length?"var(--crit)":"inherit"}">${PCP.ped.length}</b></td></tr></tbody></table>
-    ${pedF.length?`<div class="tw" style="margin-top:6px"><table><thead><tr><th>Data</th><th>Ordem</th><th>Máquina</th><th>Operador</th><th>Pedido</th></tr></thead><tbody>${pedF.slice(0,8).map(x=>`<tr><td>${br(x.d)} ${esc(x.h)}</td><td>${esc(x.ord)}</td><td>${esc(x.m)}</td><td>${esc(x.op)}</td><td style="white-space:normal;min-width:140px">${esc(x.txt)}</td></tr>`).join("")}</tbody></table>${pedF.length>8?`<p class="muted">+ ${pedF.length-8} pedido(s)</p>`:""}</div>`:""}`;
-  const d=new Date(ultimoOk||Date.now());$("#upd").textContent=`Ao vivo · atualizado às ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const val=L.filter(r=>r.st==="Validado").length,nCor=L.filter(r=>r.cor||r.st==="Corrigido").length,emc=Math.max(0,L.length-val-nCor),ped=L.filter(r=>r.ped&&r.st!=="Validado").length;const tt=Math.max(1,val+nCor+emc);
+  const br=d=>d?d.slice(8)+"/"+d.slice(5,7):"";const pedF=PCP.ped.filter(x=>(!S.g||grupoDe(x.m)===S.g)&&(!S.m||x.m===S.m)).sort((a,b)=>a.d.localeCompare(b.d));
+  const leg=(n,c,t)=>`<div class="li"><span style="display:flex;align-items:center;gap:8px"><span class="sw" style="background:${c}"></span>${t}</span><b>${n}</b></div>`;
+  $("#c6").innerHTML=`<div class="row"><div style="flex:1 1 260px;min-width:0"><div class="muted" style="margin-bottom:6px"><b style="color:var(--ink)">Unidades produzidas</b> ${per}</div>${Object.keys(ac).length?Object.entries(ac).sort((a,b)=>b[1]-a[1]).map(([a,v])=>`<div class="li"><span>${esc(a)}</span><b>${fmt(v)} un.</b></div>`).join(""):`<p class="muted">Sem lançamentos.</p>`}</div>
+    <div style="flex:1 1 300px;min-width:0"><div class="muted" style="margin-bottom:8px"><b style="color:var(--ink)">Conferência</b> · ${L.length} lançamento(s)</div>
+     <div style="display:flex;border-radius:999px;overflow:hidden;margin-bottom:8px;height:14px;background:var(--grid)"><div style="width:${val/tt*100}%;background:#9CC800"></div><div style="width:${nCor/tt*100}%;background:#111"></div><div style="width:${emc/tt*100}%;background:#C9CCC4"></div></div>
+     ${leg(val,"#9CC800","Validadas")}${leg(nCor,"#111","Corrigidas pelo PCP")}${leg(emc,"#C9CCC4","Aguardando conferência")}${ped?leg(ped,"#c62828","Com pedido de correção aberto"):""}</div>
+    <div style="flex:1 1 300px;min-width:0"><div class="muted" style="margin-bottom:6px"><b style="color:var(--ink)">Pendências do PCP</b> (todos os dias)</div>
+     <div class="li"><span>Horas aguardando conferência</span><b>${PCP.conf}${PCP.confDesde?` <span class="muted">desde ${br(PCP.confDesde)}</span>`:""}</b></div>
+     <div class="li"><span>Pedidos de correção abertos</span><b style="color:${PCP.ped.length?"var(--crit)":"inherit"}">${PCP.ped.length}</b></div>
+     ${pedF.slice(0,5).map(x=>`<div class="li" style="font-size:12.5px"><span>${br(x.d)} ${esc(x.h)} · ${esc(x.m)} · ${esc(x.op)}</span><span class="muted" style="white-space:normal;text-align:right">${esc(x.txt)}</span></div>`).join("")}</div></div>`;
+  const d=new Date(ultimoOk||Date.now());$("#upd").textContent=`atualizado às ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  if(S.sel)abrirMaq(S.sel,true);
 }
+/* ---------- painel lateral de uma máquina ---------- */
+function abrirMaq(m,soAtualizar){S.sel=m;const dw=$("#dw");const L=H.filter(r=>noPer(r)&&r.m===m),PA=P.filter(p=>noPer(p)&&p.m===m);
+  const g=grupoDe(m),D=diasPer();const kg=L.reduce((s,r)=>s+r.kg,0),meta=((MI[m]&&MI[m].meta)||0)*(S.tu?0.5:1)*D.tot,metaEsp=((MI[m]&&MI[m].meta)||0)*(S.tu?0.5:1)*D.esp;
+  const pc=meta?kg/meta*100:null;const x=EM[m]||{};const cap=(MI[m]&&MI[m].cap)||0;const hp=L.reduce((s,r)=>s+(r.min||60),0)/60,hpar=PA.reduce((s,p)=>s+p.min,0)/60;
+  const o=Object.values(abertas).find(a=>a.m===m&&a.d===TODAY);const mat=(L.length?L[L.length-1].mat:"")||MAT[m]||"";
+  const pf=v=>v==null?"—":v.toFixed(0)+"%";const per=S.p==="1"?"hoje":S.p==="7"?"7 dias":"no mês";
+  const pp={};PA.forEach(p=>pp[p.mot]=(pp[p.mot]||0)+p.min);
+  const ult=L.slice().sort((a,b)=>(b.d+pad(b.h)).localeCompare(a.d+pad(a.h))).slice(0,6);
+  const stc=r=>r.st==="Validado"?`<span class="badge good">validado</span>`:(r.cor||r.st==="Corrigido")?`<span class="badge" style="background:#111;color:var(--lime)">corrigido</span>`:`<span class="badge warn">a conferir</span>`;
+  $("#dwc").innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div>${g!=="Sem grupo"?`<span class="gtag" style="background:${g==="G1"?"var(--lime)":gCor(g)};color:${g==="G1"?"var(--ink)":"#fff"}">${esc(g)} · ${esc(descGrupo(g))}</span>`:""}
+     <h2>${esc(m)}</h2><div style="margin-top:6px"><span class="st ${o?"on":"off"}"><i></i>${o?"ordem aberta agora":"sem ordem aberta"}</span></div></div><button type="button" class="x" data-fechar="1" aria-label="Fechar">${ico("x",20)}</button></div>
+    <div class="dhero">${pc!==null?donut(pc,104,11,"#CDFF00","#2A2C27","#fff","da meta"):""}<div><div style="font-size:12px;color:#B5B8B0;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Produzido ${per}</div><div style="font-size:30px;font-weight:800">${fmt(kg)} kg</div>
+     <div style="font-size:13px;color:#C9CCC4">${meta?`meta ${fmt(meta)} kg · ${kg<meta?"faltam "+fmt(meta-kg)+" kg":"meta batida"}`:"sem meta cadastrada"}</div>${metaEsp?`<div style="margin-top:8px">${badgeDe(kg/metaEsp*100)}</div>`:""}</div></div>
+    <div class="dkpi"><div><em>Eficiência</em><b>${pf(x.efic)}</b></div><div><em>Disponib.</em><b>${cap?pf(x.disp):"—"}</b></div><div><em>Desempenho</em><b>${pf(x.desemp)}</b></div></div>
+    <div class="dkpi two"><div><em>Horas produzindo</em><b>${fh(hp)} h</b><span>${fmt(hpar*60)} min parada</span></div><div><em>Ritmo</em><b>${hp?fmt(kg/hp):"—"} kg/h</b><span>${cap?"capacidade "+fmt(cap)+" kg/h":"sem capacidade cadastrada"}</span></div></div>
+    <div><h3>Agora</h3><div class="kv">${o?`<span>Operador</span><b>${esc(o.op)}</b><span>Ordem</span><b>${esc(o.ord)}</b><span>Turno</span><b>${esc(o.tu)}</b>`:`<span>Ordem</span><b>nenhuma aberta</b>`}${mat?`<span>Material</span><b style="white-space:normal">${esc(mat)}</b>`:""}${L.length?`<span>Acondicionamento</span><b>${esc(L[L.length-1].ac)}</b>`:""}</div></div>
+    <div><h3>${S.p==="1"?"Hora a hora":"Por dia"}</h3><div id="dwg"></div></div>
+    <div><h3>Paradas</h3>${Object.keys(pp).length?Object.entries(pp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="li"><span>${esc(k)}</span><b>${fmt(v)} min</b></div>`).join(""):`<div class="li"><span class="muted">Nenhuma parada ${per}.</span></div>`}</div>
+    <div><h3>Últimos lançamentos</h3>${ult.length?ult.map(r=>`<div class="li"><span>${S.p==="1"?"":r.d.slice(8)+"/"+r.d.slice(5,7)+" "}${pad(r.h)}:00 · ${esc(String(r.op).split(" ")[0])} · ${fmt(r.q)} ${esc(r.ac)}</span><span><b>${fmt(r.kg)} kg</b> ${stc(r)}</span></div>`).join(""):`<div class="li"><span class="muted">Sem lançamentos ${per}.</span></div>`}</div>
+    <div class="muted">Números da base tratada (já com as correções do PCP).</div>`;
+  if(!soAtualizar){dw.classList.add("open");document.body.style.overflow="hidden";setTimeout(()=>{const f=dw.querySelector(".x");if(f)f.focus()},50)}
+  const b=barrasPeriodo(L,meta/(D.tot||1),170);vbars($("#dwg"),b.items,b.opt)}
+function fecharMaq(){S.sel="";$("#dw").classList.remove("open");document.body.style.overflow=""}
 /* ---------- "ao vivo": busca a planilha a cada 60 s ---------- */
 async function atualizar(){const antes=new Set(H.map(r=>r.ord+"|"+r.d+"|"+r.h));if(await carregar()){render();
   const novas=new Set(H.filter(r=>!antes.has(r.ord+"|"+r.d+"|"+r.h)).map(r=>r.ord));if(antes.size)novas.forEach(o=>{const tr=document.getElementById("r-"+o);if(tr)tr.classList.add("flash")})}else render()}
 /* ---------- eventos ---------- */
 $("#per").onclick=e=>{const b=e.target.closest("button");if(!b)return;S.p=b.dataset.p;[...$("#per").children].forEach(x=>x.classList.toggle("on",x===b));render()};
-$("#fTurno").onchange=e=>{S.tu=e.target.value;render()};$("#fMaq").onchange=e=>{S.m=e.target.value;render()};
-$("#fGrupo").onchange=e=>{S.g=e.target.value;S.m="";opcoes();render()};
-$("#grupos").onclick=e=>{const c=e.target.closest("[data-grupo]");if(!c)return;S.g=S.g===c.dataset.grupo?"":c.dataset.grupo;S.m="";opcoes();render()};
+$("#fTurno").onchange=e=>{S.tu=e.target.value;render()};
+document.addEventListener("click",e=>{const g=e.target.closest("[data-g]");if(g){const v=g.dataset.g;S.g=g.classList.contains("gcard")&&S.g===v?"":v;S.m="";render();return}
+  const m=e.target.closest("[data-maq]");if(m){abrirMaq(m.dataset.maq);return}
+  if(e.target.closest("[data-fechar]")){fecharMaq();return}
+  const a=e.target.closest(".nav a");if(a){[...document.querySelectorAll(".nav a")].forEach(x=>x.classList.toggle("on",x===a))}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#dw").classList.contains("open"))fecharMaq()});
 let _rz;addEventListener("resize",()=>{clearTimeout(_rz);_rz=setTimeout(()=>{if(!$("#gate"))render()},200)});
 const tip=$("#tip");document.addEventListener("mousemove",e=>{const t=e.target.closest("[data-tip]");if(!t){tip.style.opacity=0;return}tip.innerHTML=t.dataset.tip;tip.style.opacity=1;
   const x=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8),y=Math.min(e.clientY+14,innerHeight-tip.offsetHeight-8);tip.style.left=x+"px";tip.style.top=y+"px"});
@@ -303,9 +417,8 @@ async function entrar(auto){if(!auto)SENHA=$("#senha").value.trim();if(!SENHA)re
   catch(e){if(!$("#gate")){console.error(e);return}SENHA="";try{sessionStorage.removeItem(KS);localStorage.removeItem(KS)}catch(_){ }$("#senha").value="";$("#gmsg").textContent=/negado/i.test(e.message)?"Senha incorreta.":"Erro: "+e.message}}
 if(!API)$("#gmsg").textContent="Falta configurar o endereço do servidor (arquivo config.js).";
 $("#entrar").onclick=()=>entrar();$("#senha").onkeydown=e=>{if(e.key==="Enter")entrar()};
-$("#gmsg").insertAdjacentHTML("beforebegin",`<label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:10px;color:var(--tx2)"><input type="checkbox" id="lembrar"> Lembrar neste aparelho</label>`);
 if(SENHA)entrar(true);
-addEventListener("resize",()=>{if(!$("#gate"))render()});
+
 </script>
 </body>
 </html>
