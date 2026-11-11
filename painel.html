@@ -212,17 +212,25 @@ let PCP={conf:0,confDesde:"",ped:[]},VELHO=false,H=[],P=[],abertas={},MAQ=[],MI=
 const API=window.ERP_API||"";const KS="erp-painel-senha";
 let SENHA="";try{SENHA=sessionStorage.getItem(KS)||localStorage.getItem(KS)||""}catch(e){}
 let carregando=false,ultimoOk=0;
-async function carregar(){if(carregando)return;carregando=true;
-  try{const r=await fetch(API,{method:"POST",body:JSON.stringify({a:"painel",k:SENHA,dias:40})});const j=await r.json();if(!j.ok)throw new Error(j.erro||"Erro");
+const KC="erp-painel-cache";
+function aplicar(j){
     TODAY=j.agora.slice(0,10);HNOW=+j.agora.slice(11,13);MNOW=+j.agora.slice(14,16);
     META_DIA=j.meta;HORAS_DIA=j.horasDia||16;H_INI=j.hIni;H_FIM=j.hFim;META_H=META_DIA?Math.round(META_DIA/HORAS_DIA):0;
     H=j.L;P=j.P;PCP=j.pcp||PCP;DOMINGO=!!j.domingo;VELHO=!j.maqInfo;MI={};(j.maqInfo||[]).forEach(x=>MI[x.m]=x);
     MAQ=j.maquinas.length?j.maquinas:[...new Set(H.map(r=>r.m))];MAT={};H.forEach(r=>{if(!MAT[r.m])MAT[r.m]=r.mat});
     abertas={};j.abertas.forEach(o=>abertas[o.ord]=o);
-    opcoes();
+    opcoes()}
+/* guarda a última resposta neste aparelho para o painel abrir na hora (só se a senha estiver lembrada) */
+function salvarCache(j){try{if(!localStorage.getItem(KS))return;const t=JSON.stringify({t:Date.now(),j});if(t.length<2500000)localStorage.setItem(KC,t)}catch(e){}}
+function lerCache(){try{const o=JSON.parse(localStorage.getItem(KC)||"null");return o&&o.j&&o.j.ok?o:null}catch(e){return null}}
+let _pc=null,ULT_J=null;
+function carregar(){if(_pc)return _pc;carregando=true;
+ _pc=(async()=>{try{const r=await fetch(API,{method:"POST",body:JSON.stringify({a:"painel",k:SENHA,dias:40})});const j=await r.json();if(!j.ok)throw new Error(j.erro||"Erro");
+    aplicar(j);ULT_J=j;salvarCache(j);
     ultimoOk=Date.now();$("#aviso").style.display=VELHO?"":"none";if(VELHO)$("#aviso").innerHTML="<b>Servidor do Google desatualizado.</b> Os grupos, metas por máquina e a eficiência só aparecem depois de colar o Code.gs novo no Apps Script, rodar <b>configurar</b> e fazer <b>Implantar → Gerenciar implantações → ✏ → Nova versão</b>.";return true}
   catch(e){if(/negado/i.test(e.message))throw e;$("#aviso").style.display="";$("#aviso").textContent="Sem conexão com o servidor agora ("+e.message+"). Mostrando os últimos dados recebidos.";return false}
-  finally{carregando=false}}
+  finally{carregando=false;_pc=null}})();
+ return _pc}
 /* ---------- estado ---------- */
 let S={p:"1",tu:"",g:"",m:""};
 const $=s=>document.querySelector(s);
@@ -296,7 +304,7 @@ const gCor=g=>GCOR[g]||"#B5B8B0";
 const gTag=g=>g==="Sem grupo"?"":`<span class="tag" style="background:${g==="G1"?"var(--lime)":gCor(g)};color:${g==="G1"?"var(--ink)":"#fff"}">${esc(g)}</span>`;
 const pct0=v=>Math.round(v);
 function donut(p,size,stroke,cor,trilho,txt,sub){const r=(size-stroke)/2,c=2*Math.PI*r,d=Math.min(Math.max(p,0),100)/100*c;
-  return `<div style="position:relative;width:${size}px;height:${size}px;flex:none"><svg role="img" aria-label="${pct0(p)}% da meta" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="display:block;transform:rotate(-90deg)"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${trilho}" stroke-width="${stroke}"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${cor}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${d} ${c}"/></svg>
+  return `<div style="position:relative;width:${size}px;height:${size}px;flex:none"><svg role="img" aria-label="${pct0(p)}% da meta" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="display:block;transform:rotate(-90deg)"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${trilho}" stroke-width="${stroke}"/>${d>0.5?`<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${cor}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${d} ${c}"/>`:""}</svg>
   <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:${Math.round(size*.23)}px;font-weight:800;color:${txt};line-height:1">${pct0(p)}%</span>${sub?`<span style="font-size:11px;color:${txt};opacity:.7;margin-top:3px">${sub}</span>`:""}</div></div>`}
 const ICO={kg:'<path d="M4 20h16M6 20V10l6-6 6 6v10"/>',ef:'<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',h:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',par:'<rect x="7" y="6" width="3.5" height="12" rx="1"/><rect x="13.5" y="6" width="3.5" height="12" rx="1"/>',pcp:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 12l3 3 5-6"/>',x:'<path d="M6 6l12 12M18 6L6 18"/>'};
 const ico=(k,s=17,c="#111")=>`<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
@@ -437,13 +445,26 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#dw").classList.
 let _rz;addEventListener("resize",()=>{clearTimeout(_rz);_rz=setTimeout(()=>{if(!$("#gate"))render()},200)});
 const tip=$("#tip");document.addEventListener("mousemove",e=>{const t=e.target.closest("[data-tip]");if(!t){tip.style.opacity=0;return}tip.innerHTML=t.dataset.tip;tip.style.opacity=1;
   const x=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8),y=Math.min(e.clientY+14,innerHeight-tip.offsetHeight-8);tip.style.left=x+"px";tip.style.top=y+"px"});
-async function entrar(auto){if(!auto)SENHA=$("#senha").value.trim();if(!SENHA)return;$("#gmsg").textContent="Conectando…";
-  try{await carregar();try{sessionStorage.setItem(KS,SENHA);if($("#lembrar")&&$("#lembrar").checked)localStorage.setItem(KS,SENHA)}catch(e){}
-    $("#gate").remove();render();setInterval(()=>{if(!document.hidden)atualizar()},60000);document.addEventListener("visibilitychange",()=>{if(!document.hidden&&Date.now()-ultimoOk>30000)atualizar()})}
-  catch(e){if(!$("#gate")){console.error(e);return}SENHA="";try{sessionStorage.removeItem(KS);localStorage.removeItem(KS)}catch(_){ }$("#senha").value="";$("#gmsg").textContent=/negado/i.test(e.message)?"Senha incorreta.":"Erro: "+e.message}}
+let _entrou=false,_entrando=null;
+function abrirPainel(){if(_entrou)return;_entrou=true;const g=$("#gate");if(g)g.remove();
+  setInterval(()=>{if(!document.hidden)atualizar()},60000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&Date.now()-ultimoOk>30000)atualizar()})}
+function entrar(auto){if(_entrando)return _entrando;if(!auto)SENHA=$("#senha").value.trim();if(!SENHA)return;
+  const gm=$("#gmsg");if(gm)gm.innerHTML='<span class="dot" style="display:inline-block;vertical-align:middle;margin-right:8px"></span>Buscando os dados na planilha… (leva alguns segundos)';
+  const bt=$("#entrar");if(bt)bt.disabled=true;
+  _entrando=(async()=>{try{const ok=await carregar();try{sessionStorage.setItem(KS,SENHA);if($("#lembrar")&&$("#lembrar").checked)localStorage.setItem(KS,SENHA)}catch(e){}
+    abrirPainel();render();if(ok)salvarCacheAgora()}
+  catch(e){if(_entrou){console.error(e);return}SENHA="";try{sessionStorage.removeItem(KS);localStorage.removeItem(KS);localStorage.removeItem(KC)}catch(_){ }
+    if($("#senha"))$("#senha").value="";if(gm)gm.textContent=/negado/i.test(e.message)?"Senha incorreta.":"Erro: "+e.message;if(bt)bt.disabled=false}
+  finally{_entrando=null}})();return _entrando}
+function salvarCacheAgora(){if(ULT_J)salvarCache(ULT_J)}
 if(!API)$("#gmsg").textContent="Falta configurar o endereço do servidor (arquivo config.js).";
 $("#entrar").onclick=()=>entrar();$("#senha").onkeydown=e=>{if(e.key==="Enter")entrar()};
-if(SENHA)entrar(true);
+if(SENHA){const cc=lerCache();
+  if(cc){aplicar(cc.j);ultimoOk=cc.t;abrirPainel();render();
+    const av=$("#aviso");av.style.display="";av.innerHTML='<span class="dot" style="display:inline-block;vertical-align:middle;margin-right:8px;background:#9CC800"></span>Mostrando os dados de '+new Date(cc.t).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+' · atualizando…';
+    carregar().then(ok=>{render();if(ok)$("#aviso").style.display=VELHO?"":"none"}).catch(e=>{if(/negado/i.test(e.message)){try{localStorage.removeItem(KS);localStorage.removeItem(KC);sessionStorage.removeItem(KS)}catch(_){}location.reload()}})}
+  else entrar(true)}
 
 </script>
 </body>
