@@ -279,7 +279,12 @@ const n2=v=>(Number(v)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maxim
 const hm=v=>String(v||"").slice(11,16);
 const P_nome=()=>P.cfg.nome||"";
 /* soma kg e quantidade por acondicionamento (FARDO, BAG, PALETE, SACARIA…) */
-function porAcond(L){const a={};L.forEach(t=>{const k=String(t.Acondicionamento||"—");const o=a[k]||(a[k]={q:0,kg:0,h:0});o.q+=Number(t.Quantidade)||1;o.kg+=Number(t.PesoKg)||0;o.h++});return a}
+function porAcond(L){const a={};L.forEach(t=>{const k=String(t.Acondicionamento||"—");const o=a[k]||(a[k]={q:0,kg:0,h:0});o.q+=Number(t.Quantidade)||1;o.kg+=Number(t.PesoKg)||0;o.h+=Math.round((Number(t.DuracaoMin)||0)/6)/10});return a}
+/* horas = soma da duração real (igual à coluna Duracao_h da planilha); peso unitário = total corrigido ÷ quantidade */
+const h1=t=>Math.round((Number(t.DuracaoMin)||0)/6)/10;
+const hrs=L=>Math.round(L.reduce((s,t)=>s+h1(t),0)*10)/10;
+const fh=h=>(Math.round(h*10)/10).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1});
+const pesoUn=t=>{const q=Number(t.Quantidade)>0?Number(t.Quantidade):1;return (Number(t.PesoKg)||0)/q};
 const txtAcond=a=>Object.keys(a).sort().map(k=>a[k].q.toLocaleString("pt-BR")+" "+k).join(" · ");
 function baixar(nome,conteudo,tipo){const a=document.createElement("a");a.href=URL.createObjectURL(conteudo instanceof Blob?conteudo:new Blob([conteudo],{type:tipo+";charset=utf-8"}));a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
 /* ---------------- Excel (.xlsx) sem biblioteca: zip "store" + XML ---------------- */
@@ -296,12 +301,12 @@ function zip(files){const enc=new TextEncoder();const parts=[],cent=[];let off=0
 const xesc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
 function colL(i){let s="";i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
 /* cols: [{h, w, t:"s"|"d"|"tm"|"n0"|"n1"|"i"}]; rows: arrays de valores (d = "aaaa-mm-dd", tm = "hh:mm") */
-function xlsx(nomeAba,cols,rows){const st={s:6,d:2,tm:3,n0:4,i:4,n1:7,h1:5};
+function xlsx(nomeAba,cols,rows){const st={s:6,d:2,tm:3,n0:4,i:4,n1:7,h1:5,g:6};
   const serD=s=>{const[y,m,d]=s.split("-").map(Number);return (Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/864e5};
   const serT=s=>{const[h,m]=s.split(":").map(Number);return (h*60+m)/1440};
   const cell=(r,c,v,t)=>{const ref=colL(c)+r,sx=st[t]||6;if(v===""||v==null)return `<c r="${ref}" s="${sx}"/>`;
     if(t==="d")return `<c r="${ref}" s="${sx}"><v>${serD(v)}</v></c>`;if(t==="tm")return `<c r="${ref}" s="${sx}"><v>${serT(v)}</v></c>`;
-    if(t==="n0"||t==="n1"||t==="i"||t==="h1")return `<c r="${ref}" s="${sx}"><v>${Number(v)}</v></c>`;
+    if(t==="n0"||t==="n1"||t==="i"||t==="h1"||t==="g")return `<c r="${ref}" s="${sx}"><v>${Number(v)}</v></c>`;
     return `<c r="${ref}" s="${sx}" t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`};
   const head=`<row r="1" ht="20" customHeight="1">${cols.map((c,i)=>`<c r="${colL(i)}1" s="1" t="inlineStr"><is><t>${xesc(c.h)}</t></is></c>`).join("")}</row>`;
   const body=rows.map((r,ri)=>`<row r="${ri+2}">${r.map((v,ci)=>cell(ri+2,ci,v,cols[ci].t)).join("")}</row>`).join("");
@@ -320,8 +325,8 @@ async function exportarDiaria(){const de=($("#dxDe")&&$("#dxDe").value)||UI.dxDe
   const L=j.trat.filter(t=>{const d=String(t.DataProducao).slice(0,10);return d>=de&&d<=ate}).sort((a,b)=>String(a.DataProducao).localeCompare(String(b.DataProducao))||String(a.Turno).localeCompare(String(b.Turno))||String(a.Maquina).localeCompare(String(b.Maquina))||String(a.HoraInicio).localeCompare(String(b.HoraInicio)));
   if(!L.length){toast("Nenhum lançamento no período.");return}
   const cols=[{h:"ID",w:13,t:"s"},{h:"Data",w:11,t:"d"},{h:"Maquina_Original",w:18,t:"s"},{h:"Maquina_Padrao",w:18,t:"s"},{h:"Material",w:10,t:"s"},{h:"Classificacao",w:13,t:"s"},{h:"Qualificacao",w:15,t:"s"},{h:"Acondicionado",w:13,t:"s"},{h:"Estado",w:13,t:"s"},
-    {h:"Hora_Inicio",w:11,t:"tm"},{h:"Hora_Fim",w:11,t:"tm"},{h:"Peso_kg",w:10,t:"n0"},{h:"Quantidade",w:11,t:"i"},{h:"Total_Processado_kg",w:19,t:"n0"},{h:"Duracao_h",w:10,t:"n1"},{h:"Prod_kg_h",w:11,t:"n1"},{h:"Equipes",w:22,t:"s"},{h:"Turno",w:10,t:"s"},{h:"Descricao_Completa",w:36,t:"s"}];
-  const rows=L.map(t=>{const p=parte(t.Material);const q=Number(t.Quantidade)>0?Number(t.Quantidade):1;const tot=Number(t.PesoKg)||0;const pu=Number(t.PesoUnitKg)||(q?tot/q:tot);
+    {h:"Hora_Inicio",w:11,t:"tm"},{h:"Hora_Fim",w:11,t:"tm"},{h:"Peso_kg",w:10,t:"g"},{h:"Quantidade",w:11,t:"i"},{h:"Total_Processado_kg",w:19,t:"n0"},{h:"Duracao_h",w:10,t:"n1"},{h:"Prod_kg_h",w:11,t:"n1"},{h:"Equipes",w:22,t:"s"},{h:"Turno",w:10,t:"s"},{h:"Descricao_Completa",w:36,t:"s"}];
+  const rows=L.map(t=>{const p=parte(t.Material);const q=Number(t.Quantidade)>0?Number(t.Quantidade):1;const tot=Number(t.PesoKg)||0;const pu=tot/q;
     const dh=(Number(t.DuracaoMin)||0)/60;const ac=ai[t.Acondicionamento]||({BAG:"BAGS",PALETE:"PALLETS"}[String(t.Acondicionamento).toUpperCase()]||t.Acondicionamento);
     return [t.Ordem,String(t.DataProducao).slice(0,10),t.Maquina,t.Maquina,p.t,p.c,p.q,ac,p.e,String(t.HoraInicio).slice(11,16),String(t.HoraFim).slice(11,16),Math.round(pu*100)/100,q,Math.round(tot*100)/100,Math.round(dh*10)/10,dh?Math.round(tot/dh*10)/10:"",t.Equipes||"",String(t.Turno||"")+" TURNO",t.Material]});
   baixar("Producao_hora_a_hora_"+de+(ate!==de?"_a_"+ate:"")+".xlsx",xlsx("Producao",cols,rows));toast(rows.length+" linha(s) exportada(s).")}
@@ -330,14 +335,14 @@ const ACT={
   async confExcel(){try{toast("Gerando planilha…");const {d,L,P}=await dadosConf();if(!L.length&&!P.length){toast("Nenhum lançamento em "+br(d)+".");return}
     const cols=["Data","Turno","Ordem","Máquina","Material","Hora início","Hora fim","Operador","Acondicionamento","Quantidade","Peso por unidade (kg)","Peso total (kg)","Status PCP","Pedido do operador","Conferido (S/N)","Peso conferido (kg)","Obs. da conferência"];
     const rows=L.map(t=>({"Data":br(d),"Turno":t.Turno,"Ordem":t.Ordem,"Máquina":t.Maquina,"Material":t.Material,"Hora início":hm(t.HoraInicio),"Hora fim":hm(t.HoraFim),"Operador":t.Operador,"Acondicionamento":t.Acondicionamento,"Quantidade":t.Quantidade,
-      "Peso por unidade (kg)":t.PesoUnitKg?n2(t.PesoUnitKg):"","Peso total (kg)":n2(t.PesoKg),"Status PCP":t.StatusPCP,"Pedido do operador":t.PedidoCorrecao||"","Conferido (S/N)":"","Peso conferido (kg)":"","Obs. da conferência":""}));
+      "Peso por unidade (kg)":n2(pesoUn(t)),"Peso total (kg)":n2(t.PesoKg),"Status PCP":t.StatusPCP,"Pedido do operador":t.PedidoCorrecao||"","Conferido (S/N)":"","Peso conferido (kg)":"","Obs. da conferência":""}));
     const ACs=Object.keys(porAcond(L)).sort();const gm={};L.forEach(t=>(gm[t.Maquina]=gm[t.Maquina]||[]).push(t));
-    const linhaRes=(nome,ls)=>{const a=porAcond(ls);return [csvCell(nome),ls.length,n2(ls.reduce((s,t)=>s+(Number(t.PesoKg)||0),0))].concat(ACs.map(k=>a[k]?a[k].q:0)).join(";")+";;"};
+    const linhaRes=(nome,ls)=>{const a=porAcond(ls);return [csvCell(nome),fh(hrs(ls)),n2(ls.reduce((s,t)=>s+(Number(t.PesoKg)||0),0))].concat(ACs.map(k=>a[k]?a[k].q:0)).join(";")+";;"};
     let out=csv(rows,cols);
     out+="\r\nResumo por máquina\r\nMáquina;Horas;Peso total (kg);"+ACs.map(k=>"Qtd "+k).join(";")+";Peso conferido (kg);Qtd conferida\r\n"+Object.keys(gm).sort().map(k=>linhaRes(k,gm[k])).join("\r\n")+"\r\n"+linhaRes("TOTAL DO DIA",L)+"\r\n";
-    const aT=porAcond(L);out+="\r\nTotal por acondicionamento\r\nAcondicionamento;Quantidade;Peso total (kg);Horas;Qtd conferida;Peso conferido (kg)\r\n"+ACs.map(k=>[csvCell(k),aT[k].q,n2(aT[k].kg),aT[k].h,"",""].join(";")).join("\r\n")+"\r\n";
+    const aT=porAcond(L);out+="\r\nTotal por acondicionamento\r\nAcondicionamento;Quantidade;Peso total (kg);Horas;Qtd conferida;Peso conferido (kg)\r\n"+ACs.map(k=>[csvCell(k),aT[k].q,n2(aT[k].kg),fh(aT[k].h),"",""].join(";")).join("\r\n")+"\r\n";
     if(P.length)out+="\r\nParadas\r\nMáquina;Motivo;Início;Fim;Minutos;Operador;Observação\r\n"+P.map(x=>[x.Maquina,x.Motivo,hm(x.Inicio),hm(x.Fim),x.DuracaoMin,x.Operador,x.Observacao||""].map(csvCell).join(";")).join("\r\n")+"\r\n";
-    baixar("Conferencia_Producao_"+d+".csv",out,"text/csv");toast("Planilha de "+br(d)+" baixada ("+L.length+" hora(s)).")}catch(e){toast("Erro: "+e.message)}},
+    baixar("Conferencia_Producao_"+d+".csv",out,"text/csv");toast("Planilha de "+br(d)+" baixada ("+L.length+" lançamento(s), "+fh(hrs(L))+" h).")}catch(e){toast("Erro: "+e.message)}},
   async confResumo(){const w=window.open("","_blank");if(!w){toast("Libere pop-ups para imprimir.");return}w.document.write("<p style='font-family:Arial'>Carregando…</p>");
     try{const {d,L,P}=await dadosConf();const tot=L.reduce((s,t)=>s+(Number(t.PesoKg)||0),0);const aT=porAcond(L);const ACs=Object.keys(aT).sort((x,y)=>aT[y].kg-aT[x].kg);
       const g={};L.forEach(t=>{const k=t.Maquina+"|"+t.Turno;(g[k]=g[k]||[]).push(t)});
@@ -351,7 +356,7 @@ const ACT={
         const ords=[...new Set(ls.map(t=>t.Ordem.replace("OPR-","")))].join(", ");const ops=[...new Set(ls.map(t=>t.Operador))].join(", ");const corr=ls.filter(t=>t.StatusPCP==="Corrigido").length;
         const mats=[...new Set(ls.map(t=>t.Material))].join(" · ");
         return `<tr${i%2?' class="z"':""}><td class="ck"><span class="box"></span></td><td><div class="maq">${esc(m)}</div><div class="sub">${esc(mats)}</div></td><td><span class="tu tu${tu==="2º"?2:1}">${esc(tu)}</span></td>
-          <td><div>${esc(ops)}</div><div class="sub">OPR ${esc(ords)}</div></td><td class="n">${ls.length} h</td>
+          <td><div>${esc(ops)}</div><div class="sub">OPR ${esc(ords)}</div></td><td class="n">${fh(hrs(ls))} h</td>
           ${ACs.map(x=>a[x]?`<td class="n ac"><b>${q(a[x].q)}</b><div class="sub">${n2(a[x].kg)} kg</div></td>`:`<td class="n ac vazio">—</td>`).join("")}
           <td class="n kg"><b>${n2(kg)}</b>${corr?`<div class="tagc">✎ ${corr} corrigida(s)</div>`:""}</td><td class="n">${pm[k]?pm[k]+" min":"—"}</td>
           <td class="cf"></td><td class="cf"></td><td class="cf obs"></td></tr>`}).join("");
@@ -385,13 +390,13 @@ const ACT={
         <div class="hd"><img src="${logo}" onerror="this.remove()"><div class="t"><h1>Conferência da produção</h1><div class="s">Checagem do que foi lançado pela produção · gerado em ${br(nowIso().slice(0,16))} por ${esc(P_nome())}</div></div>
           <div class="dia"><b>${br(d)}</b><span>${esc(dia)}</span></div></div>
         <div class="kpis">
-          <div class="k main"><div class="l">Total produzido</div><div class="v">${n2(tot)} <small style="color:#cfd3c6">kg</small></div><div class="x">${L.length} hora(s) · ${nMaq} máquina(s) · ${nOrd} ordem(ns)</div></div>
+          <div class="k main"><div class="l">Total produzido</div><div class="v">${n2(tot)} <small style="color:#cfd3c6">kg</small></div><div class="x">${fh(hrs(L))} h · ${L.length} lançamento(s) · ${nMaq} máquina(s) · ${nOrd} ordem(ns)</div></div>
           ${ACs.map(x=>`<div class="k ac"><div class="l">${esc(x)}</div><div class="v">${q(aT[x].q)} <small>un.</small></div><div class="x">${n2(aT[x].kg)} kg</div></div>`).join("")}
           <div class="k"><div class="l">Paradas</div><div class="v">${parT} <small>min</small></div><div class="x">${P.length} ocorrência(s)</div></div>
           <div class="k"><div class="l">Situação no PCP</div><div class="v" style="font-size:14px;padding-top:4px">${nVal} ✓ · ${nCorr} ✎</div><div class="x">validadas · corrigidas</div></div>
           <div class="k conf"><div class="l" style="color:#3d4f00">Total conferido</div><div class="v">________ kg</div></div></div>
         ${L.length?`<table><thead><tr><th></th><th>Máquina / material</th><th>Turno</th><th>Operador / ordem</th><th class="n">Horas</th>${ACs.map(x=>`<th class="n ach">${esc(x)}</th>`).join("")}<th class="n">Peso total (kg)</th><th class="n">Paradas</th><th class="cfh">Qtd conferida</th><th class="cfh">Peso conferido</th><th class="cfh">Observação</th></tr></thead><tbody>${linhas}</tbody>
-          <tfoot><tr><td></td><td>TOTAL DO DIA</td><td></td><td></td><td class="n">${L.length} h</td>${ACs.map(x=>`<td class="n">${q(aT[x].q)}<div class="sub">${n2(aT[x].kg)} kg</div></td>`).join("")}<td class="n">${n2(tot)}</td><td class="n">${parT?parT+" min":"—"}</td><td class="cf"></td><td class="cf"></td><td class="cf"></td></tr></tfoot></table>`:`<p style="font-size:14px;padding:20px;border:1px dashed #999;border-radius:9px">Nenhum lançamento neste dia.</p>`}
+          <tfoot><tr><td></td><td>TOTAL DO DIA</td><td></td><td></td><td class="n">${fh(hrs(L))} h</td>${ACs.map(x=>`<td class="n">${q(aT[x].q)}<div class="sub">${n2(aT[x].kg)} kg</div></td>`).join("")}<td class="n">${n2(tot)}</td><td class="n">${parT?parT+" min":"—"}</td><td class="cf"></td><td class="cf"></td><td class="cf"></td></tr></tfoot></table>`:`<p style="font-size:14px;padding:20px;border:1px dashed #999;border-radius:9px">Nenhum lançamento neste dia.</p>`}
         <div class="leg">☐ marque cada linha conferida · Quantidade em unidades de cada acondicionamento (as colunas mudam conforme o que foi produzido) · Pesos da base tratada (já com as correções do PCP) · ✎ = hora corrigida pelo PCP</div>
         <div class="ft"><div class="a">Conferido por</div><div class="a">Data / hora</div><div class="a">Visto do PCP</div></div></div>
         <script>
@@ -402,7 +407,7 @@ const ACT={
     try{const {d,L,P}=await dadosConf();const g={};L.forEach(t=>(g[t.Maquina]=g[t.Maquina]||[]).push(t));const tot=L.reduce((s,t)=>s+(Number(t.PesoKg)||0),0);
       const logo=new URL("logo.png",location.href).href;
       const blocos=Object.keys(g).sort().map(m=>{const ls=g[m];const kgm=ls.reduce((s,t)=>s+(Number(t.PesoKg)||0),0);
-        return `<h3>${esc(m)} <span>· ${ls.length} hora(s) · <b>${n2(kgm)} kg</b> · ${esc(txtAcond(porAcond(ls)))}</span></h3><table><thead><tr><th>✓</th><th>Turno</th><th>Ordem</th><th>Hora</th><th>Operador</th><th>Material</th><th>Acond.</th><th class=n>Qtd</th><th class=n>Peso un.</th><th class=n>Peso total</th><th>Peso conferido</th><th>Obs.</th></tr></thead><tbody>${ls.map(t=>`<tr><td class=ck>☐</td><td>${esc(t.Turno)}</td><td>${esc(t.Ordem)}</td><td>${hm(t.HoraInicio)}–${hm(t.HoraFim)}</td><td>${esc(t.Operador)}</td><td>${esc(t.Material)}</td><td>${esc(t.Acondicionamento)}</td><td class=n>${esc(t.Quantidade??"")}</td><td class=n>${t.PesoUnitKg?n2(t.PesoUnitKg):""}</td><td class=n><b>${n2(t.PesoKg)}</b>${t.StatusPCP!=="Em conferência"?`<br><small>${esc(t.StatusPCP)}</small>`:""}</td><td class=w></td><td class=w></td></tr>`).join("")}</tbody></table>`}).join("");
+        return `<h3>${esc(m)} <span>· ${fh(hrs(ls))} h · ${ls.length} lançamento(s) · <b>${n2(kgm)} kg</b> · ${esc(txtAcond(porAcond(ls)))}</span></h3><table><thead><tr><th>✓</th><th>Turno</th><th>Ordem</th><th>Hora</th><th>Operador</th><th>Material</th><th>Acond.</th><th class=n>Qtd</th><th class=n>Peso un.</th><th class=n>Peso total</th><th>Peso conferido</th><th>Obs.</th></tr></thead><tbody>${ls.map(t=>`<tr><td class=ck>☐</td><td>${esc(t.Turno)}</td><td>${esc(t.Ordem)}</td><td>${hm(t.HoraInicio)}–${hm(t.HoraFim)}</td><td>${esc(t.Operador)}</td><td>${esc(t.Material)}</td><td>${esc(t.Acondicionamento)}</td><td class=n>${esc(t.Quantidade??"")}</td><td class=n>${n2(pesoUn(t))}</td><td class=n><b>${n2(t.PesoKg)}</b>${t.StatusPCP!=="Em conferência"?`<br><small>${esc(t.StatusPCP)}</small>`:""}</td><td class=w></td><td class=w></td></tr>`).join("")}</tbody></table>`}).join("");
       const par=P.length?`<h3>Paradas</h3><table><thead><tr><th>Máquina</th><th>Motivo</th><th>Início</th><th>Fim</th><th class=n>Min</th><th>Operador</th><th>Obs.</th></tr></thead><tbody>${P.map(x=>`<tr><td>${esc(x.Maquina)}</td><td>${esc(x.Motivo)}</td><td>${hm(x.Inicio)}</td><td>${hm(x.Fim)}</td><td class=n>${esc(x.DuracaoMin)}</td><td>${esc(x.Operador)}</td><td>${esc(x.Observacao||"")}</td></tr>`).join("")}</tbody></table>`:"";
       w.document.open();w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Conferência ${br(d)}</title><style>
         body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:18px}.top{display:flex;align-items:center;gap:14px;border-bottom:3px solid #111;padding-bottom:8px}
@@ -412,13 +417,13 @@ const ACT={
         .res{margin-top:10px;font-size:13px}.ass{display:flex;gap:40px;margin-top:36px}.ass div{flex:1;border-top:1px solid #111;padding-top:4px}
         @media print{.np{display:none}}</style></head><body>
         <div class="np" style="margin-bottom:10px"><button onclick="print()" style="font-size:14px;padding:6px 14px">Imprimir</button></div>
-        <div class="top"><img src="${logo}" onerror="this.remove()"><div><h1>Conferência da produção — ${br(d)}</h1><div>${L.length} hora(s) lançada(s) · <b>${n2(tot)} kg</b> · ${esc(txtAcond(porAcond(L)))} · gerado em ${br(nowIso().slice(0,16))} por ${esc(P_nome())}</div></div></div>
+        <div class="top"><img src="${logo}" onerror="this.remove()"><div><h1>Conferência da produção — ${br(d)}</h1><div>${fh(hrs(L))} h · ${L.length} lançamento(s) · <b>${n2(tot)} kg</b> · ${esc(txtAcond(porAcond(L)))} · gerado em ${br(nowIso().slice(0,16))} por ${esc(P_nome())}</div></div></div>
         ${L.length?blocos:"<p>Nenhum lançamento neste dia.</p>"}${par}
         <h3>Totais do dia</h3><table style="width:auto;min-width:60%"><thead><tr><th>Acondicionamento</th><th class=n>Quantidade</th><th class=n>Peso total (kg)</th><th class=n>Horas</th><th>Qtd conferida</th><th>Peso conferido (kg)</th></tr></thead><tbody>
-          ${(()=>{const a=porAcond(L);return Object.keys(a).sort().map(k=>`<tr><td>${esc(k)}</td><td class=n><b>${a[k].q.toLocaleString("pt-BR")}</b></td><td class=n>${n2(a[k].kg)}</td><td class=n>${a[k].h}</td><td class=w></td><td class=w></td></tr>`).join("")})()}
-          <tr><td><b>TOTAL</b></td><td class=n>—</td><td class=n><b>${n2(tot)}</b></td><td class=n><b>${L.length}</b></td><td class=w></td><td class=w></td></tr></tbody></table>
+          ${(()=>{const a=porAcond(L);return Object.keys(a).sort().map(k=>`<tr><td>${esc(k)}</td><td class=n><b>${a[k].q.toLocaleString("pt-BR")}</b></td><td class=n>${n2(a[k].kg)}</td><td class=n>${fh(a[k].h)}</td><td class=w></td><td class=w></td></tr>`).join("")})()}
+          <tr><td><b>TOTAL</b></td><td class=n>—</td><td class=n><b>${n2(tot)}</b></td><td class=n><b>${fh(hrs(L))}</b></td><td class=w></td><td class=w></td></tr></tbody></table>
         <h3>Por máquina</h3><table style="width:auto;min-width:60%"><thead><tr><th>Máquina</th><th class=n>Horas</th><th class=n>Peso total (kg)</th><th>Quantidade</th><th>Peso conferido (kg)</th></tr></thead><tbody>
-          ${Object.keys(g).sort().map(m=>`<tr><td>${esc(m)}</td><td class=n>${g[m].length}</td><td class=n>${n2(g[m].reduce((s,t)=>s+(Number(t.PesoKg)||0),0))}</td><td>${esc(txtAcond(porAcond(g[m])))}</td><td class=w></td></tr>`).join("")}</tbody></table>
+          ${Object.keys(g).sort().map(m=>`<tr><td>${esc(m)}</td><td class=n>${fh(hrs(g[m]))}</td><td class=n>${n2(g[m].reduce((s,t)=>s+(Number(t.PesoKg)||0),0))}</td><td>${esc(txtAcond(porAcond(g[m])))}</td><td class=w></td></tr>`).join("")}</tbody></table>
         <div class="ass"><div>Conferido por</div><div>Data / hora</div><div>Visto do PCP</div></div>
         <script>setTimeout(()=>print(),700)<\/script></body></html>`);w.document.close()}
     catch(e){w.close();toast("Erro: "+e.message)}},
