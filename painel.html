@@ -278,7 +278,7 @@ function vbars(el,items,opt){ // items: [{x,label,parts:[{v,c,name}]}]
   items.forEach((it,i)=>{const cx=ml+gap*i+gap/2;let y=mt+ih;const tot=it.parts.reduce((a,p)=>a+p.v,0);
     it.parts.forEach((p,j)=>{if(!p.v)return;const h=p.v/max*ih;const top=j===it.parts.length-1||!it.parts.slice(j+1).some(q=>q.v);
       s+=`<path d="${rbar(cx-bw/2,y-h,bw,h-(j?0:0),top?4:0)}" fill="${p.c}"/>`;y-=h+(h>3?2:0)});
-    s+=`<rect x="${cx-gap/2}" y="${mt}" width="${gap}" height="${ih}" fill="transparent" data-tip="<b>${esc(it.tip||it.label)}</b><br>${it.parts.filter(p=>p.v).map(p=>esc(p.name)+": "+fmt(p.v)+" kg").join("<br>")}${it.parts.length>1?"<br>Total: "+fmt(tot)+" kg":""}"/>`;
+    s+=`<rect x="${cx-gap/2}" y="${mt}" width="${gap}" height="${ih}" fill="transparent" data-tip="<b>${esc(it.tip||it.label)}</b><br>${it.parts.filter(p=>p.v).map(p=>esc(p.name)+": "+fmt(p.v)+" kg").join("<br>")}${it.parts.length>1?"<br>Total: "+fmt(tot)+" kg":""}${(it.extra||[]).map(x=>"<br>"+esc(x)).join("")}"/>`;
     if(gap>=26||i%2===0)s+=`<text x="${cx}" y="${Hh-9}" font-size="11" text-anchor="middle" fill="var(--tx2)">${esc(it.label)}</text>`});
   if(opt.ref){const y=mt+ih-opt.ref/max*ih;s+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="var(--tx2)" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${W-mr}" y="${y-5}" font-size="11" text-anchor="end" fill="var(--tx2)">${esc(opt.refLabel)}</text>`}
   el.innerHTML=s+`</svg>`}
@@ -290,12 +290,14 @@ function rbar(x,y,w,h,r){r=Math.min(r,h,w/2);return `M${x},${y+h}V${y+r}Q${x},${
 function niceStep(v){const p=Math.pow(10,Math.floor(Math.log10(v||1)));const n=v/p;return (n<1.5?1:n<3?2:n<7?5:10)*p}
 
 /* ---------- render ---------- */
+function extraDe(Ls){if(!Ls.length)return [];const os=[...new Set(Ls.map(r=>r.ord))];
+  return ["Horas trabalhadas: "+fh(hSoma(Ls))+" h",(os.length===1?"Ordem: ":"Ordens: ")+(os.length<=3?os.join(", "):os.slice(0,3).join(", ")+" +"+(os.length-3))]}
 function barrasPeriodo(L,ref,h){ // hora a hora (hoje) ou por dia
   if(S.p==="1"){const hs=[];const hmin=Math.min(H_INI,...L.map(r=>r.h)),hmax=Math.max(H_FIM-1,...L.map(r=>r.h));for(let x=hmin;x<=hmax;x++)hs.push(x);
-    return{items:hs.map(x=>({label:pad(x)+"h",tip:pad(x)+":00–"+pad(x+1)+":00",parts:[{v:L.filter(r=>r.h===x&&r.tu==="1º").reduce((s,r)=>s+r.kg,0),c:"var(--s1)",name:"1º turno"},{v:L.filter(r=>r.h===x&&r.tu==="2º").reduce((s,r)=>s+r.kg,0),c:"var(--s2)",name:"2º turno"}]})),
+    return{items:hs.map(x=>({label:pad(x)+"h",tip:pad(x)+":00–"+pad(x+1)+":00",extra:extraDe(L.filter(r=>r.h===x)),parts:[{v:L.filter(r=>r.h===x&&r.tu==="1º").reduce((s,r)=>s+r.kg,0),c:"var(--s1)",name:"1º turno"},{v:L.filter(r=>r.h===x&&r.tu==="2º").reduce((s,r)=>s+r.kg,0),c:"var(--s2)",name:"2º turno"}]})),
       opt:{ref:ref/(HORAS_DIA||16),refLabel:"meta por hora",h,aria:"Produção hora a hora"}}}
   const ds=[];for(let d=inicioPer();d<=TODAY;d=addD(d,1))if(produz(d)||L.some(r=>r.d===d))ds.push(d);
-  return{items:ds.map(d=>({label:d.slice(8)+"/"+d.slice(5,7),parts:[{v:L.filter(r=>r.d===d&&r.tu==="1º").reduce((s,r)=>s+r.kg,0),c:"var(--s1)",name:"1º turno"},{v:L.filter(r=>r.d===d&&r.tu==="2º").reduce((s,r)=>s+r.kg,0),c:"var(--s2)",name:"2º turno"}]})),
+  return{items:ds.map(d=>({label:d.slice(8)+"/"+d.slice(5,7),extra:extraDe(L.filter(r=>r.d===d)),parts:[{v:L.filter(r=>r.d===d&&r.tu==="1º").reduce((s,r)=>s+r.kg,0),c:"var(--s1)",name:"1º turno"},{v:L.filter(r=>r.d===d&&r.tu==="2º").reduce((s,r)=>s+r.kg,0),c:"var(--s2)",name:"2º turno"}]})),
     opt:{ref,refLabel:"meta do dia",h,aria:"Produção por dia"}}}
 
 /* ======================= PAINEL MODERNO (layout novo) ======================= */
