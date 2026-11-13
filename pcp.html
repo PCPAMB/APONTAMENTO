@@ -36,7 +36,7 @@ table{width:100%;border-collapse:collapse;background:#fff;font-size:13.5px}
 th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--tx2);text-align:left;padding:8px;border-bottom:1px solid var(--bd);background:#fafbf8;position:sticky;top:0}
 td{padding:8px;border-bottom:1px solid var(--bd);white-space:nowrap}
 tr.click{cursor:pointer}tr.click:hover td{background:var(--limeL)}
-tr.dup td{background:var(--errL)}
+tr.dup td{background:var(--errL)}tr.pfn td{background:#FFF1DC}.chip.pf{background:#d98a00;color:#fff;font-size:11px}
 .num{text-align:right}
 .tw{border:1px solid var(--bd);border-radius:10px;overflow:auto;max-height:calc(100vh - 330px);min-height:120px}
 .chip{font-size:11.5px;padding:3px 9px;border-radius:12px;background:var(--bg);white-space:nowrap}
@@ -193,7 +193,7 @@ function tela(){
       <div class="kpi"><b>${Math.round(all.reduce((s,t)=>s+t.PesoKg,0)).toLocaleString("pt-BR")} kg</b><span>Total ${f.ordem?"da busca":"no período"}</span></div>
       <div class="kpi w"><b>${pedidos().length}</b><span>Pedidos de correção</span></div></div>
     <div class="tw"><table><thead><tr><th>Ordem</th><th>Hora</th><th>Máquina</th><th>Material</th><th class="num">Peso (kg)</th><th>Qtd / acond.</th><th>Operador</th><th>Status</th></tr></thead><tbody>
-    ${P.carregando&&!rows.length?`<tr><td colspan="8" class="empty">Carregando…</td></tr>`:rows.length?rows.map(t=>`<tr class="click${t.Dup>1?" dup":""}" data-reg="${esc(t.ID)}"><td><b>${esc(t.Ordem)}</b></td><td>${brc(t.HoraInicio)}–${hh(t.HoraFim)}</td><td>${esc(t.Maquina)}</td><td>${esc(t.Material)}</td><td class="num">${kg(t.PesoKg)}</td><td>${esc(t.Quantidade)} ${esc(t.Acondicionamento)}</td><td>${esc(t.Operador)}</td><td>${t.PedidoCorrecao&&t.StatusTratado!=="Validado"?`<span class="chip cs">Correção pedida</span>`:chip(t.StatusTratado)}</td></tr>`).join("")
+    ${P.carregando&&!rows.length?`<tr><td colspan="8" class="empty">Carregando…</td></tr>`:rows.length?rows.map(t=>`<tr class="click${t.Dup>1?" dup":""}${/PESO FORA DO NORMAL/.test(t.Observacao||"")?" pfn":""}" data-reg="${esc(t.ID)}"><td><b>${esc(t.Ordem)}</b></td><td>${brc(t.HoraInicio)}–${hh(t.HoraFim)}</td><td>${esc(t.Maquina)}</td><td>${esc(t.Material)}</td><td class="num">${kg(t.PesoKg)}${/PESO FORA DO NORMAL/.test(t.Observacao||"")?`<br><span class="chip pf">⚠ peso fora do normal</span>`:""}</td><td>${esc(t.Quantidade)} ${esc(t.Acondicionamento)}</td><td>${esc(t.Operador)}</td><td>${t.PedidoCorrecao&&t.StatusTratado!=="Validado"?`<span class="chip cs">Correção pedida</span>`:chip(t.StatusTratado)}</td></tr>`).join("")
       :`<tr><td colspan="8" class="empty">Nenhum lançamento neste filtro.</td></tr>`}
     </tbody></table></div><p class="muted">Linha vermelha = possível duplicidade (mesma hora lançada duas vezes na ordem, ou mesma máquina, hora e peso). Clique numa linha para conferir.</p></div>`}
   case "ordens":{
