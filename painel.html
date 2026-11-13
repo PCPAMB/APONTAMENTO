@@ -31,7 +31,7 @@ a{color:inherit}
 /* conteúdo */
 main{flex:999 1 680px;min-width:0;display:flex;flex-direction:column;gap:16px}
 .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.top .tt{flex:1;min-width:230px}.top .dd{font-size:13px;color:var(--tx2)}.top h1{margin:2px 0 0;font-size:30px;font-weight:800;letter-spacing:-.01em}
+.top .tt{flex:1;min-width:230px}.top .dd{font-size:13px;color:var(--tx2);display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px}.clima{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.65);border:1px solid var(--bd);border-radius:999px;padding:3px 11px;font-weight:600;color:var(--tx)}.clima b{font-size:14px}.clima i{font-style:normal;color:var(--tx2);font-weight:400}.top h1{margin:2px 0 0;font-size:30px;font-weight:800;letter-spacing:-.01em}
 .top .logo{height:26px;width:auto}
 .seg{display:inline-flex;background:#fff;border:1px solid var(--bd);border-radius:999px;padding:4px;gap:2px}
 .seg button{border:0;border-radius:999px;padding:9px 16px;background:transparent;cursor:pointer;font-size:14px}
@@ -176,7 +176,7 @@ main{flex:1 1 auto}
 </nav>
 <main>
  <div class="top" id="visao">
-  <div class="tt"><div class="dd" id="hoje"></div><h1>Visão geral da fábrica</h1></div>
+  <div class="tt"><div class="dd"><span id="hoje"></span><span id="clima" class="clima" hidden></span></div><h1>Painel da produção · Manaus</h1></div>
   <div class="seg" id="per" role="group" aria-label="Período"><button type="button" data-p="1" class="on">Hoje</button><button type="button" data-p="7">7 dias</button><button type="button" data-p="mes">Mês</button></div>
   <select class="sel" id="fTurno" aria-label="Turno"><option value="">Todos os turnos</option><option>1º</option><option>2º</option></select>
   <img class="logo" src="logo_preto.png" alt="Ambipar" onerror="this.remove()">
@@ -213,7 +213,8 @@ const API=window.ERP_API||"";const KS="erp-painel-senha";
 let SENHA="";try{SENHA=sessionStorage.getItem(KS)||localStorage.getItem(KS)||""}catch(e){}
 let carregando=false,ultimoOk=0;
 const KC="erp-painel-cache";
-function aplicar(j){
+let CLIMA=null;
+function aplicar(j){CLIMA=j.clima||null;
     TODAY=j.agora.slice(0,10);HNOW=+j.agora.slice(11,13);MNOW=+j.agora.slice(14,16);
     META_DIA=j.meta;HORAS_DIA=j.horasDia||16;H_INI=j.hIni;H_FIM=j.hFim;META_H=META_DIA?Math.round(META_DIA/HORAS_DIA):0;
     H=j.L;P=j.P;PCP=j.pcp||PCP;DOMINGO=!!j.domingo;VELHO=!j.maqInfo;MI={};(j.maqInfo||[]).forEach(x=>MI[x.m]=x);
@@ -317,6 +318,9 @@ function serie(Lm){if(S.p==="1"){const out=[];for(let h=H_INI;h<H_FIM;h++)out.pu
   const out=[];for(let d=inicioPer();d<=TODAY;d=addD(d,1))if(produz(d)||Lm.some(r=>r.d===d))out.push(Lm.filter(r=>r.d===d).reduce((s,r)=>s+r.kg,0));return out.slice(-16)}
 function spark(v,cor,H=38,w=5){const mx=Math.max(1,...v);return `<div class="spark" aria-hidden="true" style="height:${H}px">${v.map(x=>`<i style="height:${Math.max(2,Math.round(x/mx*H))}px;width:${w}px;background:${cor}"></i>`).join("")}</div>`}
 function opcoes(){}
+function climaTxt(s){s=String(s||"").replace(/_(day|night|polartwilight)$/,"");const M={clearsky:["☀️","céu limpo"],fair:["🌤️","poucas nuvens"],partlycloudy:["⛅","parcialmente nublado"],cloudy:["☁️","nublado"],fog:["🌫️","neblina"],
+  lightrain:["🌦️","chuva fraca"],rain:["🌧️","chuva"],heavyrain:["🌧️","chuva forte"],lightrainshowers:["🌦️","pancadas fracas"],rainshowers:["🌦️","pancadas de chuva"],heavyrainshowers:["⛈️","pancadas fortes"]};
+  if(/thunder/.test(s))return["⛈️","trovoadas"];return M[s]||["🌡️",""]}
 function ultEq(ls){for(let i=ls.length-1;i>=0;i--)if(ls[i].eq)return ls[i].eq;return ""} /* filtros agora são os chips de grupo (render) */
 let EM={};
 function render(){
@@ -328,7 +332,10 @@ function render(){
   const per=S.p==="1"?"hoje":S.p==="7"?"nos últimos 7 dias":"em "+MESES[+TODAY.slice(5,7)-1];
   const metaTxt=S.p==="1"?"meta do dia":S.p==="7"?"meta dos 7 dias":"meta do mês até hoje";
   const escopo=S.m?" · "+S.m:S.g?" · "+S.g:"";
-  const dd=dt(TODAY);$("#hoje").textContent=dd.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"})+" · "+pad(HNOW)+":"+pad(MNOW)+(S.tu?" · "+S.tu+" turno":"");
+  const dd=dt(TODAY);$("#hoje").textContent=dd.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"})+" · "+pad(HNOW)+":"+pad(MNOW)+(S.tu?" · "+S.tu+" turno":"")+" · 📍 Manaus · Amazonas";
+  const cl=$("#clima");if(cl){if(CLIMA&&CLIMA.t!=null){const c=climaTxt(CLIMA.sym);cl.hidden=false;
+    cl.innerHTML=`<span aria-hidden="true">${c[0]}</span><b>${Math.round(CLIMA.t)}°C</b> ${c[1]}${CLIMA.mx!=null?` <i>· máx ${Math.round(CLIMA.mx)}° mín ${Math.round(CLIMA.mn)}°</i>`:""}${CLIMA.u!=null?` <i>· umidade ${Math.round(CLIMA.u)}%</i>`:""}${CLIMA.chuva>0?` <i>· chuva prevista ${String(CLIMA.chuva).replace(".",",")} mm</i>`:""}`;
+    cl.title="Previsão: MET Norway (CC BY 4.0), atualizada a cada 30 minutos"}else cl.hidden=true}
   /* chips de grupo */
   const GS=grupos().filter(g=>g!=="Sem grupo"||H.some(r=>noPer(r)&&grupoDe(r.m)==="Sem grupo"));
   $("#fGrupos").innerHTML=`<button type="button" class="chip${S.g?"":" on"}" data-g="">Todos</button>`+GS.map(g=>`<button type="button" class="chip${S.g===g?" on":""}" data-g="${esc(g)}"><i style="background:${g==="G1"?"var(--lime)":gCor(g)}"></i>${esc(g)}</button>`).join("");
@@ -428,7 +435,7 @@ function abrirMaq(m,soAtualizar){S.sel=m;const dw=$("#dw");const L=H.filter(r=>n
     ${o&&!Lo.length?`<div class="aviso" style="margin-top:10px">Nenhuma hora lançada ainda nesta ordem. Os números aparecem aqui quando o operador <b>lança a hora</b> no app e o celular envia (com internet).</div>`:""}</div>
     <div><h3>${S.p==="1"?"Hora a hora":"Por dia"}</h3><div id="dwg"></div></div>
     <div><h3>Paradas${PA.length?` <span class="muted" style="font-weight:400;font-size:13px">· ${PA.length} · ${fmt(hpar*60)} min</span>`:""}</h3>${PA.length?PA.slice().sort((a,b)=>(b.d+(b.ini||"")).localeCompare(a.d+(a.ini||""))).slice(0,10).map(p=>`<div class="li" style="align-items:flex-start"><span><b>${esc(p.mot)}</b><br><span class="muted" style="font-size:12.5px">${p.d.slice(8)}/${p.d.slice(5,7)}${p.ini?" · "+esc(p.ini)+(p.fim?"–"+esc(p.fim):""):""}${p.op?" · "+esc(String(p.op).split(" ")[0]):""}${p.ord?" · "+esc(p.ord):""}${p.obs?" · "+esc(p.obs):""}</span></span><b style="white-space:nowrap">${fmt(p.min)} min</b></div>`).join("")+(PA.length>10?`<div class="muted" style="font-size:12.5px;margin-top:4px">+ ${PA.length-10} parada(s) mais antiga(s)</div>`:""):`<div class="li"><span class="muted">Nenhuma parada ${per}.</span></div>`}</div>
-    <div><h3>Últimos lançamentos</h3>${ult.length?ult.map(r=>`<div class="li"><span>${S.p==="1"?"":r.d.slice(8)+"/"+r.d.slice(5,7)+" "}${pad(r.h)}:00 · ${esc(String(r.op).split(" ")[0])} · ${fmt(r.q)} ${esc(r.ac)}</span><span><b>${fmt(r.kg)} kg</b> ${stc(r)}</span></div>${r.eq?`<div class="muted" style="font-size:12px;margin:-4px 0 4px">equipe: ${esc(r.eq)}</div>`:""}`).join(""):`<div class="li"><span class="muted">Sem lançamentos ${per}.</span></div>`}</div>
+    <div><h3>Últimos lançamentos</h3>${ult.length?ult.map(r=>`<div class="li"><span>${S.p==="1"?"":r.d.slice(8)+"/"+r.d.slice(5,7)+" "}${pad(r.h)}:00 · ${esc(String(r.op).split(" ")[0])} · ${fmt(r.q)} ${esc(r.ac)}</span><span style="display:flex;align-items:flex-start;gap:8px;text-align:right"><span><b>${fmt(r.kg)} kg</b>${r.q>1?`<br><span class="muted" style="font-size:12px">${(r.kg/r.q).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})} × ${fmt(r.q)}</span>`:""}</span>${stc(r)}</span></div>${r.eq?`<div class="muted" style="font-size:12px;margin:-4px 0 4px">equipe: ${esc(r.eq)}</div>`:""}`).join(""):`<div class="li"><span class="muted">Sem lançamentos ${per}.</span></div>`}</div>
     <div class="muted">Números da base tratada (já com as correções do PCP).</div>`;
   if(!soAtualizar){dw.classList.add("open");document.body.style.overflow="hidden";setTimeout(()=>{const f=dw.querySelector(".x");if(f)f.focus()},50)}
   const b=barrasPeriodo(L,meta/(D.tot||1),170);vbars($("#dwg"),b.items,b.opt)}
