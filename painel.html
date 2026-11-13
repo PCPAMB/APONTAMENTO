@@ -128,6 +128,17 @@ svg text{font-family:inherit}
  .live{margin:0 0 0 auto;padding:8px 12px}.live div{display:none}
  .app{padding:10px;gap:12px}.top h1{font-size:24px}.hero .v{font-size:36px}
 }
+.mt.alerta{border:2px solid #e0453a!important;background:linear-gradient(180deg,rgba(255,230,226,.9),rgba(255,255,255,.75))!important;animation:pulsa 2s infinite}
+@keyframes pulsa{0%,100%{box-shadow:0 0 0 0 rgba(224,69,58,.0)}50%{box-shadow:0 0 0 6px rgba(224,69,58,.18)}}
+.alm{background:#c62828;color:#fff;font-size:12.5px;font-weight:700;border-radius:10px;padding:6px 10px}.alm span{font-weight:400;opacity:.85}
+#balerta{background:#FFE4E0;border:1px solid #f3b3aa;color:#8a1c14;border-radius:14px;padding:10px 14px;font-size:14px}
+.cmp{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}.cmp.up{background:#CDFF00;color:#111}.cmp.dn{background:#FFE4E0;color:#b3261e}
+.pjg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.pjg>div{background:rgba(255,255,255,.6);border:1px solid var(--bd);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+.pjg em{font-style:normal;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx2)}.pjg b{font-size:26px}.pjg span{font-size:12.5px;color:var(--tx2)}
+.pjb{position:relative;height:16px;background:var(--grid);border-radius:999px;margin-top:16px;overflow:hidden}.pjb i{position:absolute;top:0;bottom:0;left:0;background:#111;border-radius:999px 0 0 999px}
+.pjb i.p{background:repeating-linear-gradient(45deg,#9CC800 0 6px,#CDFF00 6px 12px);border-radius:0}.pjb .mk{position:absolute;right:0;top:-2px;bottom:-2px;width:3px;background:#c62828}
+.pjl{display:flex;gap:16px;font-size:12px;color:var(--tx2);margin-top:8px;flex-wrap:wrap}.pjl i{display:inline-block;width:14px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+@media(max-width:800px){.pjg{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* ===== Layout B · Faixa verde no topo + menu horizontal ===== */
 :root{--bg:#F3F7EA;--bd:#E2E8D5;--grid:#EBEFE2}
 body{background:linear-gradient(180deg,rgba(156,200,0,.42) 0,rgba(190,235,40,.30) 210px,rgba(205,255,0,.16) 380px,transparent 381px),#F3F7EA}
@@ -469,6 +480,52 @@ function entrar(auto){if(_entrando)return _entrando;if(!auto)SENHA=$("#senha").v
 function salvarCacheAgora(){if(ULT_J)salvarCache(ULT_J)}
 if(!API)$("#gmsg").textContent="Falta configurar o endereço do servidor (arquivo config.js).";
 $("#entrar").onclick=()=>entrar();$("#senha").onkeydown=e=>{if(e.key==="Enter")entrar()};
+/* ===== 2.6: alerta sem lançamento (tempo de cada máquina), comparação e projeção do mês ===== */
+(function(){
+const _render=render;
+render=function(){_render();try{extras()}catch(e){console.error(e)}};
+const fmtT=v=>(v/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})+" t";
+function prevDia(d){let x=addD(d,-1);for(let i=0;i<7&&!produz(x);i++)x=addD(x,-1);return x}
+function filtro(r){return (!S.tu||r.tu===S.tu)&&(!S.g||grupoDe(r.m)===S.g)&&(!S.m||r.m===S.m)}
+/* tempo típico de cada lançamento, aprendido com o histórico da própria máquina (mediana da duração) */
+const dur=m=>m>=60?(Math.floor(m/60)+"h"+(m%60?pad(m%60):"")):m+" min";
+function tempoTipico(m){const v=H.filter(r=>r.m===m&&r.min>=10).map(r=>r.min).sort((a,b)=>a-b);if(v.length<5)return 60;return Math.round(v[Math.floor(v.length/2)]/5)*5}
+function limiteDe(t){return Math.max(60,Math.round(t*1.5/15)*15)}
+function extras(){
+  const agora=HNOW*60+MNOW;
+  /* 1 · máquina com ordem aberta e sem lançar há mais de 1 hora */
+  const abM={};Object.values(abertas).forEach(o=>{if(o.d===TODAY)abM[o.m]=o});
+  document.querySelectorAll("#mgrid .mt[data-maq]").forEach(el=>{const o=abM[el.dataset.maq];el.classList.remove("alerta");const old=el.querySelector(".alm");if(old)old.remove();if(!o)return;
+    const ls=H.filter(r=>r.ord===o.ord&&r.d===TODAY);let ult=ls.length?Math.max(...ls.map(r=>(r.h+1)*60)):(o.ab?(+o.ab.slice(0,2))*60+(+o.ab.slice(3,5)):null);if(ult==null)return;
+    const t=tempoTipico(el.dataset.maq),lim=limiteDe(t);const gap=agora-ult;if(gap<lim)return;el.classList.add("alerta");const d=document.createElement("div");d.className="alm";
+    d.innerHTML=`⚠ sem lançamento desde ${pad(Math.floor(ult/60))}:${pad(ult%60)} <span>(${dur(gap)} · o normal desta máquina é ~${dur(t)})</span>`;el.insertBefore(d,el.children[1])});
+  const nAl=document.querySelectorAll("#mgrid .mt.alerta").length;let ba=document.getElementById("balerta");
+  if(!ba){ba=document.createElement("div");ba.id="balerta";document.getElementById("fGrupos").after(ba)}
+  ba.innerHTML=nAl?`<b>⚠ ${nAl} máquina(s) com ordem aberta e sem lançamento além do tempo normal dela.</b> Veja os cartões em vermelho em Máquinas.`:"";ba.style.display=nAl?"":"none";
+  /* 2 · comparação com antes */
+  const tu=$("#hero .tu");if(tu){let txt="";
+    if(S.p==="1"){const ont=prevDia(TODAY);const a=H.filter(r=>r.d===TODAY&&r.h<HNOW&&filtro(r)).reduce((s,r)=>s+r.kg,0),b=H.filter(r=>r.d===ont&&r.h<HNOW&&filtro(r)).reduce((s,r)=>s+r.kg,0);
+      if(b)txt=cmp(a,b,`${ont.slice(8)}/${ont.slice(5,7)} até ${pad(HNOW)}h`)}
+    else if(S.p==="7"){const i1=addD(TODAY,-6),i0=addD(TODAY,-13),f0=addD(TODAY,-7);const a=H.filter(r=>r.d>=i1&&r.d<=TODAY&&filtro(r)).reduce((s,r)=>s+r.kg,0),b=H.filter(r=>r.d>=i0&&r.d<=f0&&filtro(r)).reduce((s,r)=>s+r.kg,0);
+      if(b)txt=cmp(a,b,"os 7 dias anteriores")}
+    const ex=tu.querySelector(".cmp");if(ex)ex.remove();if(txt)tu.insertAdjacentHTML("beforeend",txt)}
+  /* 3 · projeção do mês */
+  let pj=document.getElementById("proj");if(!pj){pj=document.createElement("section");pj.className="box";pj.id="proj";document.getElementById("grupos").before(pj)}
+  const mes=TODAY.slice(0,7),ini=mes+"-01";const kg=H.filter(r=>r.d.slice(0,7)===mes&&filtro(r)).reduce((s,r)=>s+r.kg,0);
+  let feitos=0,resto=0;for(let d=ini;d.slice(0,7)===mes;d=addD(d,1)){if(!produz(d))continue;if(d<TODAY)feitos++;else if(d===TODAY){feitos+=fracHoje();resto+=1-fracHoje()}else resto++}
+  const mD=metaDia(S.g,S.m)*(S.tu?0.5:1),metaMes=mD*diasMes(),ritmo=feitos?kg/feitos:0,prev=kg+ritmo*resto,falta=Math.max(0,metaMes-kg),porDia=resto?falta/resto:0,pc=metaMes?prev/metaMes*100:0;
+  const cor=pc>=100?"#4c8a00":pc>=92?"#d98a00":"#c62828";const nm=MESES[+mes.slice(5)-1];
+  pj.innerHTML=`<div class="hd2"><h2>Projeção de ${nm}</h2><span>no ritmo atual${S.g?" · "+S.g:""}${S.tu?" · "+S.tu+" turno":""}</span></div>
+   <div class="pjg"><div><em>Fechamento previsto</em><b style="color:${cor}">${fmtT(prev)}</b><span>${metaMes?pc.toFixed(0)+"% da meta":"sem meta"}</span></div>
+   <div><em>Produzido até agora</em><b>${fmtT(kg)}</b><span>${Math.floor(feitos)} dia(s) de produção</span></div>
+   <div><em>Meta do mês</em><b>${metaMes?fmtT(metaMes):"—"}</b><span>${diasMes()} dias de produção</span></div>
+   <div><em>Para bater a meta</em><b>${falta?fmtT(porDia)+"/dia":"✓ batida"}</b><span>${falta?"faltam "+fmtT(falta)+" em "+Math.ceil(resto)+" dia(s)":"meta do mês já alcançada"}</span></div></div>
+   ${metaMes?`<div class="pjb"><i style="width:${Math.min(100,kg/metaMes*100)}%"></i><i class="p" style="left:${Math.min(100,kg/metaMes*100)}%;width:${Math.max(0,Math.min(100,prev/metaMes*100)-kg/metaMes*100)}%"></i><span class="mk" title="meta"></span></div>
+   <div class="pjl"><span><i style="background:#111"></i>produzido</span><span><i style="background:repeating-linear-gradient(45deg,#9CC800 0 4px,#CDFF00 4px 8px)"></i>previsto até o fim do mês</span><span><i style="background:#c62828;width:3px"></i>meta</span></div>`:""}`;
+}
+function cmp(a,b,ref){const p=(a-b)/b*100;const up=p>=0;return `<span class="cmp ${up?"up":"dn"}">${up?"▲":"▼"} ${Math.abs(p).toFixed(0)}% vs ${ref}</span>`}
+})();
+
 if(SENHA){const cc=lerCache();
   if(cc){aplicar(cc.j);ultimoOk=cc.t;abrirPainel();render();
     const av=$("#aviso");av.style.display="";av.innerHTML='<span class="dot" style="display:inline-block;vertical-align:middle;margin-right:8px;background:#9CC800"></span>Mostrando os dados de '+new Date(cc.t).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+' · atualizando…';
