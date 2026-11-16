@@ -465,6 +465,102 @@ function campo(e){const t=e.target;
   else return;
   re?render():suave()}
 document.addEventListener("input",campo);document.addEventListener("change",campo);
+/* ===================== 2.9 · ESTOQUE DE PRODUTO ACABADO ===================== */
+NAV.splice(NAV.length-1,0,["estoque","Estoque"]);
+const EST={d:null,carregando:false,erro:"",aba:"saldo",q:"",todos:false,aviso:"",tipo:"SAIDA",f:{prod:"",kg:"",un:"",cliente:"",doc:"",placa:"",preco:"",obs:"",contado:"",data:""},dp:{}};
+const fk=v=>Math.round(Number(v)||0).toLocaleString("pt-BR");
+const ft=v=>((Number(v)||0)/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})+" t";
+const rs=v=>(Number(v)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+async function carregarEst(silencioso){if(EST.carregando)return;EST.carregando=true;if(!silencioso)render();
+  try{EST.d=await api({a:"estoque"});EST.erro=""}catch(e){EST.erro=e.message;toast("Erro: "+e.message)}finally{EST.carregando=false;suave()}}
+const _telaEst0=tela;tela=function(){if(UI.tela==="estoque"&&P.cfg.nome&&P.cfg.senha)return header()+telaEst();return _telaEst0()};
+const _atuEst0=ACT.atualizar;ACT.atualizar=async()=>{if(UI.tela==="estoque")return carregarEst();return _atuEst0()};
+setInterval(()=>{if(UI.tela==="estoque"&&!document.hidden&&!document.activeElement.closest(".estf"))carregarEst(true)},90000);
+function itemEst(p){return EST.d&&EST.d.itens.find(x=>x.p===p)}
+function telaEst(){const d=EST.d;
+  if(!d)return `<div class="wrap"><div class="box">${EST.carregando?"Carregando o estoque…":EST.erro?`<p class="warn">${esc(EST.erro)}</p><button class="btn" data-act="atualizar">Tentar de novo</button>`:"…"}</div></div>`;
+  if(!d.itens.length||!d.ini)return `<div class="wrap"><div class="box" style="max-width:760px;border-left:5px solid var(--limeD)"><h4>Estoque ainda não começou</h4>
+    <p>Para ligar o estoque, na planilha do Google:</p><ol style="line-height:1.8">
+    <li>Cole os produtos na aba <b>CAD_Estoque</b> (use a planilha de importação: Produto, Classificação, Unidade, PesoRefKg, PrecoKg, EstoqueMinKg).</li>
+    <li>Faça a <b>contagem física</b> e preencha <b>SaldoInicialKg</b> de cada produto.</li>
+    <li>Na aba <b>CONFIG</b>, coloque o dia da contagem em <b>ESTOQUE_INICIO</b> (dd/mm/aaaa).</li>
+    <li>Na aba <b>DEPARA_ESTOQUE</b>, ligue cada material do app ao produto do estoque (ou faça aqui, depois de ligar).</li></ol>
+    <p class="muted">Hoje: ${d.itens.length} produto(s) cadastrado(s) · início ${d.ini?br(d.ini):"não definido"}.</p><button class="btn" data-act="atualizar">Atualizar</button></div></div>`;
+  const hoje=d.hoje,M=d.mov;const entH=M.filter(m=>m.d===hoje&&(m.t==="PRODUCAO"||m.t==="ENTRADA")).reduce((s,m)=>s+m.kg,0),saiH=M.filter(m=>m.d===hoje&&m.t==="SAIDA").reduce((s,m)=>s+m.kg,0);
+  const conf=M.filter(m=>m.d===hoje&&m.t==="PRODUCAO"&&m.st!=="Validado"&&m.st!=="Corrigido").length;
+  const tot=d.itens.reduce((s,x)=>s+Math.max(0,x.saldo),0),nCom=d.itens.filter(x=>x.saldo>0).length;
+  const abaixo=d.itens.filter(x=>x.min&&x.saldo<x.min),neg=d.itens.filter(x=>x.saldo<0);
+  const prods=d.itens.map(x=>x.p).sort((a,b)=>a.localeCompare(b));
+  return `<div class="wrap estw">
+  ${d.pend.length?`<div class="box" style="border:2px solid var(--warn);background:var(--warnL);margin-bottom:12px"><h4>⚠ ${d.pend.length} material(is) do app sem produto no estoque <small>esses kg ainda não entraram no saldo</small></h4>
+    ${d.pend.map(p=>`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0"><b style="min-width:300px">${esc(p.mat)}</b><span class="muted" style="min-width:150px">${fk(p.kg)} kg · ${p.n} lançamento(s)</span>
+      <select class="sel estf" data-dp="${esc(p.mat)}" style="min-width:280px">${opts(prods,EST.dp[p.mat]||"","Escolha o produto do estoque…")}</select><button class="btn" data-est="depara" data-mat="${esc(p.mat)}">Ligar</button></div>`).join("")}</div>`:""}
+  ${neg.length||abaixo.length?`<div class="warn" style="margin:0 0 12px">${neg.length?`<b>Saldo negativo:</b> ${neg.map(x=>esc(x.p)+" ("+fk(x.saldo)+" kg)").join(" · ")} — confira as saídas ou faça um inventário. `:""}${abaixo.length?`<b>Abaixo do mínimo:</b> ${abaixo.map(x=>esc(x.p)+" ("+fk(x.saldo)+" de "+fk(x.min)+" kg)").join(" · ")}`:""}</div>`:""}
+  <div class="kpis"><div class="kpi" style="background:var(--dark);color:var(--lime);border-color:var(--dark)"><b>${ft(tot)}</b><span style="color:#cfd3c6">Saldo agora · ${nCom} produto(s) com saldo</span></div>
+   <div class="kpi"><b>${fk(entH)} kg</b><span>Entrou hoje${conf?` · ${conf} a conferir`:""}</span></div><div class="kpi"><b>${fk(saiH)} kg</b><span>Saiu hoje</span></div>
+   <div class="kpi"><b>${ft(d.mes.ent)}</b><span>Entrou no mês</span></div><div class="kpi"><b>${ft(d.mes.sai)}</b><span>Saiu no mês · ${d.mes.nSai} carga(s)</span></div></div>
+  <div style="display:grid;grid-template-columns:minmax(330px,400px) 1fr;gap:16px;align-items:start">${formEst(prods)}
+  <div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">${[["saldo","Saldo por produto"],["mov","Movimentos (30 dias)"]].map(([k,n])=>`<button class="btn ${EST.aba===k?"":"sec"}" data-est="aba" data-v="${k}">${n}</button>`).join("")}
+   <input class="in estf" id="estq" placeholder="Procurar produto…" value="${esc(EST.q)}" style="margin-left:auto;min-width:220px">${EST.aba==="saldo"?`<label class="muted" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="esttodos"${EST.todos?" checked":""}> mostrar sem saldo</label>`:""}</div>
+   ${EST.aba==="saldo"?tabSaldo(d):tabMov(d)}</div></div>
+   <p class="muted">Entradas da produção chegam sozinhas, em kg reais, pelos lançamentos (já com as correções do PCP). Início do estoque: ${br(d.ini)}. Unidades são estimadas pelo peso médio real dos últimos lançamentos.</p></div>`}
+function formEst(prods){const f=EST.f,t=EST.tipo,it=itemEst(f.prod);const kgv=num(f.kg),un=num(f.un);
+  const est=t==="SAIDA"&&it&&un>0&&it.pm?Math.round(un*it.pm):0;const dif=est&&kgv?kgv-est:null;
+  const tit={SAIDA:"Registrar saída",ENTRADA:"Entrada manual",INVENTARIO:"Inventário (contagem)"}[t];
+  return `<div class="box estf" style="border-left:5px solid var(--limeD)"><h4>${tit}</h4>
+  <div style="display:flex;gap:6px;margin-bottom:6px">${[["SAIDA","Saída"],["ENTRADA","Entrada manual"],["INVENTARIO","Inventário"]].map(([k,n])=>`<button class="btn ${t===k?"":"sec"}" style="padding:6px 10px;font-size:13px" data-est="tipo" data-v="${k}">${n}</button>`).join("")}</div>
+  <span class="lbl">Produto</span><select class="sel" data-e="prod" style="width:100%">${opts(prods,f.prod,"Escolha o produto…")}</select>
+  ${it?`<div class="info" style="margin-top:8px">Saldo no sistema: <b>${fk(it.saldo)} kg</b>${it.unEst!=null?` · ~${fk(it.unEst)} ${esc((it.un||"un.").toLowerCase())}`:""}<br><span class="muted">peso médio ${it.pmReal?"real":"de referência"}: ${it.pm?it.pm.toLocaleString("pt-BR")+" kg por unidade":"—"}${it.preco?` · preço ${rs(it.preco)}/kg`:""}</span></div>`:""}
+  ${t==="INVENTARIO"?`<span class="lbl">Peso contado no físico (kg)</span><input class="in" data-e="contado" inputmode="decimal" style="width:100%" value="${esc(f.contado)}" placeholder="ex.: 12.400">
+    ${it&&f.contado!==""?`<div class="warn">Ajuste que será lançado: <b>${fk(num(f.contado)-it.saldo)} kg</b> (contado ${fk(num(f.contado))} − sistema ${fk(it.saldo)})</div>`:""}`
+  :`<div class="g2"><div><span class="lbl">Unidades${t==="SAIDA"?" (opcional)":""}</span><input class="in" data-e="un" inputmode="numeric" value="${esc(f.un)}" placeholder="ex.: 20"></div>
+    <div><span class="lbl">${t==="SAIDA"?"Peso na balança (kg)":"Peso (kg)"}</span><input class="in" data-e="kg" inputmode="decimal" value="${esc(f.kg)}" placeholder="ex.: 5.290"></div></div>
+    ${dif!=null?`<div class="${Math.abs(dif)>est*0.03?"warn":"info"}" style="margin-top:8px">Pelo peso médio, ${fk(un)} un. ≈ <b>${fk(est)} kg</b>. Diferença na balança: <b>${dif>0?"+":""}${fk(dif)} kg (${(dif/est*100).toFixed(1).replace(".",",")}%)</b>.</div>`:""}
+    ${t==="SAIDA"?`<span class="lbl">Cliente / destino</span><input class="in" data-e="cliente" style="width:100%" value="${esc(f.cliente)}">
+    <div class="g2"><div><span class="lbl">NF / OTR / romaneio</span><input class="in" data-e="doc" value="${esc(f.doc)}"></div><div><span class="lbl">Placa</span><input class="in" data-e="placa" value="${esc(f.placa)}"></div></div>
+    <span class="lbl">Preço R$/kg ${it&&it.preco?`(vazio = ${rs(it.preco)})`:"(opcional)"}</span><input class="in" data-e="preco" inputmode="decimal" style="width:100%" value="${esc(f.preco)}">
+    ${kgv&&(num(f.preco)||(it&&it.preco))?`<div class="muted" style="margin-top:4px">Valor: <b>${rs(kgv*(num(f.preco)||it.preco))}</b></div>`:""}`:""}`}
+  <span class="lbl">Data</span><input class="in" type="date" data-e="data" value="${esc(f.data||today())}" max="${today()}">
+  <span class="lbl">Observação${t==="ENTRADA"?" (origem: triagem, compra…)":""}</span><input class="in" data-e="obs" style="width:100%" value="${esc(f.obs)}">
+  ${EST.aviso?`<div class="warn">${esc(EST.aviso)}<br><button class="btn" style="margin-top:8px" data-est="enviar" data-forcar="1">Confirmar mesmo assim</button></div>`:""}
+  <p style="margin:14px 0 0"><button class="btn big" style="width:100%" data-est="enviar">${tit}</button></p></div>`}
+function filtraEst(p){const q=EST.q.trim().toUpperCase();return !q||String(p).toUpperCase().includes(q)}
+function tabSaldo(d){const dp=d.diasParado||30;
+  const L=d.itens.filter(x=>filtraEst(x.p)&&(EST.todos||x.saldo||x.entMes||x.saiMes)).sort((a,b)=>b.saldo-a.saldo);
+  return `<div class="tw" style="max-height:none"><table><thead><tr><th>Produto</th><th>Classif.</th><th class="num">Saldo (kg)</th><th class="num">~Unid.</th><th class="num">Peso médio</th><th class="num">Entrou no mês</th><th class="num">Saiu no mês</th><th class="num">Parado</th></tr></thead><tbody>
+  ${L.length?L.map(x=>`<tr class="click" data-est="usar" data-p="${esc(x.p)}"><td><b>${esc(x.p)}</b>${x.min&&x.saldo<x.min?` <span class="chip cs">abaixo do mínimo</span>`:""}</td><td>${esc(x.cl)}</td><td class="num" style="${x.saldo<0?"color:var(--err);font-weight:700":""}"><b>${fk(x.saldo)}</b></td><td class="num">${x.unEst!=null?fk(x.unEst)+" "+esc((x.un||"").toLowerCase()):"—"}</td><td class="num">${x.pm?x.pm.toLocaleString("pt-BR")+" kg"+(x.pmReal?"":" <span class='muted'>(ref.)</span>"):"—"}</td><td class="num">${fk(x.entMes)}</td><td class="num">${fk(x.saiMes)}</td><td class="num"${x.parado!=null&&x.parado>=dp?' style="color:#b36b00;font-weight:700"':""}>${x.parado==null?"—":x.parado===0?"hoje":x.parado+" dia(s)"}</td></tr>`).join(""):`<tr><td colspan="8" class="empty">Nenhum produto ${EST.q?"encontrado":"com saldo"}.</td></tr>`}</tbody></table></div><p class="muted">Clique num produto para usá-lo no formulário.</p>`}
+function tabMov(d){const tp={PRODUCAO:["Entrada produção","Validado"],ENTRADA:["Entrada manual","Corrigido"],SAIDA:["Saída","cs"],AJUSTE:["Ajuste inventário",""]};
+  const L=d.mov.filter(m=>filtraEst(m.p)).slice(0,300);
+  return `<div class="tw" style="max-height:640px"><table><thead><tr><th>Data / hora</th><th>Tipo</th><th>Produto</th><th class="num">Unid.</th><th class="num">kg</th><th>Origem / destino</th><th>Situação</th><th></th></tr></thead><tbody>
+  ${L.length?L.map(m=>{const s=m.t==="SAIDA"||(m.t==="AJUSTE"&&m.kg<0)?-1:1;const k=Math.abs(m.kg)*s;
+    return `<tr><td>${brc(m.d)}${m.hr===false?"":" "+hh(m.dh)}</td><td><span class="chip ${tp[m.t][1]}">${tp[m.t][0]}</span></td><td>${esc(m.p)}</td><td class="num">${m.un?fk(m.un):""}</td><td class="num" style="color:${s<0?"#9b1c1c":"#2f5f00"}"><b>${k>0?"+":""}${fk(k)}</b></td>
+    <td style="white-space:normal;max-width:300px">${m.t==="PRODUCAO"?esc(m.ori):m.t==="SAIDA"?esc([m.cli,m.doc,m.placa].filter(Boolean).join(" · "))+(m.ke?` <span class="muted">(dif. ${m.kg-m.ke>0?"+":""}${fk(m.kg-m.ke)} kg)</span>`:""):esc(m.obs)}</td>
+    <td>${m.t==="PRODUCAO"?(m.st==="Validado"||m.st==="Corrigido"?chip(m.st):`<span class="chip">a conferir</span>`):`<span class="muted">${esc(m.resp)}</span>`}</td>
+    <td>${m.t!=="PRODUCAO"?`<button class="btn sec" style="padding:3px 9px;font-size:12px" data-est="cancelar" data-id="${esc(m.id)}">Cancelar</button>`:""}</td></tr>`}).join(""):`<tr><td colspan="8" class="empty">Sem movimentos.</td></tr>`}</tbody></table></div>
+  <p class="muted">Entradas da produção se corrigem sozinhas quando o PCP corrige o lançamento. Saídas, entradas manuais e ajustes errados: use "Cancelar" (fica registrado).</p>`}
+document.addEventListener("click",async e=>{if(e.target.closest('[data-tela="estoque"]')){carregarEst();return}
+  const b=e.target.closest("[data-est]");if(!b||b.disabled)return;const a=b.dataset.est;
+  if(a==="aba"){EST.aba=b.dataset.v;return render()}
+  if(a==="tipo"){EST.tipo=b.dataset.v;EST.aviso="";return render()}
+  if(a==="usar"){EST.f.prod=b.dataset.p;EST.aviso="";render();const x=document.querySelector('[data-e="'+(EST.tipo==="INVENTARIO"?"contado":"kg")+'"]');if(x)x.focus();return}
+  if(a==="depara"){const p=EST.dp[b.dataset.mat];if(!p)return toast("Escolha o produto do estoque.");b.disabled=true;
+    try{await api({a:"estDepara",mat:b.dataset.mat,prod:p});toast("Ligado: "+b.dataset.mat+" → "+p);await carregarEst(true)}catch(err){toast("Erro: "+err.message);b.disabled=false}return}
+  if(a==="cancelar"){const mo=prompt("Motivo do cancelamento deste movimento:");if(!mo||!mo.trim())return;
+    try{await api({a:"estCancelar",id:b.dataset.id,motivo:mo.trim(),resp:P.cfg.nome});toast("Movimento cancelado.");await carregarEst(true)}catch(err){toast("Erro: "+err.message)}return}
+  if(a==="enviar"){const f=EST.f,t=EST.tipo;if(!f.prod)return toast("Escolha o produto.");
+    if(t==="INVENTARIO"&&f.contado==="")return toast("Informe o peso contado.");if(t!=="INVENTARIO"&&!(num(f.kg)>0))return toast("Informe o peso em kg.");
+    const body={a:"estMov",tipo:t,prod:f.prod,kg:num(f.kg),un:num(f.un),contado:num(f.contado),cliente:f.cliente.trim(),doc:f.doc.trim(),placa:f.placa.trim(),preco:f.preco===""?"":num(f.preco),obs:f.obs.trim(),data:f.data||today(),resp:P.cfg.nome,forcar:!!b.dataset.forcar};
+    document.querySelectorAll('[data-est="enviar"]').forEach(x=>x.disabled=true);
+    try{const r=await api(body);EST.aviso="";toast(t==="INVENTARIO"?(r.dif?`Ajuste de ${fk(r.dif)} kg lançado.`:r.msg):`${t==="SAIDA"?"Saída":"Entrada"} registrada. Saldo agora: ${fk(r.saldo)} kg.`);
+      Object.assign(EST.f,{kg:"",un:"",cliente:"",doc:"",placa:"",preco:"",obs:"",contado:""});await carregarEst(true)}
+    catch(err){if(/confirme/i.test(err.message)){EST.aviso=err.message;render()}else{toast("Erro: "+err.message);render()}}}});
+function campoEst(e){const t=e.target;
+  if(t.dataset.e!==undefined){EST.f[t.dataset.e]=t.value;if(t.dataset.e==="prod")EST.aviso="";if((e.type==="change"&&t.dataset.e==="prod")||(e.type==="input"&&["kg","un","contado","preco"].includes(t.dataset.e)))suave();return}
+  if(t.dataset.dp!==undefined){EST.dp[t.dataset.dp]=t.value;return}
+  if(t.id==="estq"){EST.q=t.value;clearTimeout(window._eq);window._eq=setTimeout(()=>{suave();const x=$("#estq");if(x){x.focus();x.setSelectionRange(x.value.length,x.value.length)}},300);return}
+  if(t.id==="esttodos"){EST.todos=t.checked;render()}}
+document.addEventListener("input",campoEst);document.addEventListener("change",campoEst);
+
 render();carregar(false);
 </script>
 </body>
