@@ -469,7 +469,7 @@ document.addEventListener("input",campo);document.addEventListener("change",camp
 NAV.splice(NAV.length-1,0,["estoque","Estoque"]);
 const EST={d:null,carregando:false,erro:"",aba:"saldo",q:"",todos:false,aviso:"",tipo:"SAIDA",f:{prod:"",kg:"",un:"",cliente:"",doc:"",placa:"",preco:"",obs:"",contado:"",data:""},dp:{}};
 const fk=v=>Math.round(Number(v)||0).toLocaleString("pt-BR");
-const ft=v=>((Number(v)||0)/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})+" t";
+const ft=v=>Math.round(Number(v)||0).toLocaleString("pt-BR")+" kg";
 const rs=v=>(Number(v)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 async function carregarEst(silencioso){if(EST.carregando)return;EST.carregando=true;if(!silencioso)render();
   try{EST.d=await api({a:"estoque"});EST.erro=""}catch(e){EST.erro=e.message;toast("Erro: "+e.message)}finally{EST.carregando=false;suave()}}

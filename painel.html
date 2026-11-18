@@ -513,7 +513,7 @@ $("#entrar").onclick=()=>entrar();$("#senha").onkeydown=e=>{if(e.key==="Enter")e
 (function(){
 const _render=render;
 render=function(){_render();try{extras()}catch(e){console.error(e)}};
-const fmtT=v=>(v/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})+" t";
+const fmtT=v=>Math.round(Number(v)||0).toLocaleString("pt-BR")+" kg";
 function prevDia(d){let x=addD(d,-1);for(let i=0;i<7&&!produz(x);i++)x=addD(x,-1);return x}
 function filtro(r){return (!S.tu||r.tu===S.tu)&&(!S.g||grupoDe(r.m)===S.g)&&(!S.m||r.m===S.m)}
 /* tempo típico de cada lançamento, aprendido com o histórico da própria máquina (mediana da duração) */
@@ -594,7 +594,7 @@ if(location.hash==="#tv"){const t=setInterval(()=>{if(!document.getElementById("
 (function(){
 let EP=null;
 const _ap=aplicar;aplicar=function(j){_ap(j);EP=j.est||null};
-const ftE=v=>((Number(v)||0)/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})+" t";
+const ftE=v=>Math.round(Number(v)||0).toLocaleString("pt-BR")+" kg";
 const rsE=v=>(Number(v)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
 const brE=d=>d?d.slice(8,10)+"/"+d.slice(5,7):"";
 const ICO_E='<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>';
@@ -603,10 +603,10 @@ function garantir(){let s=document.getElementById("estoque");
   let a=document.querySelector('.nav a[href="#estoque"]');
   if(!a){a=document.createElement("a");a.href="#estoque";a.innerHTML=ICO_E+"Estoque";const ref=document.querySelector('.nav a[href="#pcp"]');ref.after(a)}
   return {s,a}}
-function barrasES(sr,W0){const W=Math.max(260,(W0||360)-4),Hh=170,ml=40,mb=24,mt=8,iw=W-ml-8,ih=Hh-mt-mb;
+function barrasES(sr,W0){const W=Math.max(260,(W0||360)-4),Hh=170,ml=56,mb=24,mt=8,iw=W-ml-8,ih=Hh-mt-mb;
   const mx=Math.max(1,...sr.map(x=>Math.max(x.e,x.s)))*1.1;const g=iw/sr.length,bw=Math.min(12,g*0.32);
   const st=niceStep(mx/3);let s=`<svg width="${W}" height="${Hh}" role="img" aria-label="Entradas e saídas por dia">`;
-  for(let t=0;t<=mx;t+=st){const y=mt+ih-t/mx*ih;s+=`<line x1="${ml}" x2="${W-8}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${ml-6}" y="${y+4}" font-size="10.5" text-anchor="end" fill="var(--tx3)">${(t/1000).toLocaleString("pt-BR",{maximumFractionDigits:0})}</text>`}
+  for(let t=0;t<=mx;t+=st){const y=mt+ih-t/mx*ih;s+=`<line x1="${ml}" x2="${W-8}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${ml-6}" y="${y+4}" font-size="10.5" text-anchor="end" fill="var(--tx3)">${Math.round(t).toLocaleString("pt-BR")}</text>`}
   sr.forEach((x,i)=>{const cx=ml+g*i+g/2;const he=x.e/mx*ih,hs=x.s/mx*ih;
     if(he)s+=`<path d="${rbar(cx-bw-1,mt+ih-he,bw,he,3)}" fill="#9CC800"/>`;if(hs)s+=`<path d="${rbar(cx+1,mt+ih-hs,bw,hs,3)}" fill="#111"/>`;
     s+=`<rect x="${cx-g/2}" y="${mt}" width="${g}" height="${ih}" fill="transparent" data-tip="<b>${brE(x.d)}</b><br>Entrou: ${fmt(x.e)} kg<br>Saiu: ${fmt(x.s)} kg"/>`;
@@ -631,7 +631,7 @@ function estoqueRender(){const {s,a}=garantir();const e=EP;
    <div style="flex:1.5 1 520px;min-width:0"><div class="tw"><table><thead><tr><th>Material</th><th class="num">Saldo kg</th><th class="num">~Unid.</th><th style="width:26%"></th><th class="num">Parado há</th></tr></thead><tbody>
     ${it.length?it.slice(0,14).map(x=>{const pa=x.parado!=null&&x.parado>=e.diasParado;return `<tr><td><b>${esc(x.p)}</b></td><td class="num"><b>${fmt(x.saldo)}</b></td><td class="num">${x.unEst!=null?fmt(x.unEst)+" "+esc((x.un||"").toLowerCase()):"—"}</td>
      <td><div class="mini2"><i style="width:${Math.max(0,x.saldo)/mxS*100}%;background:${pa?"#d98a00":x.min&&x.saldo<x.min?"#c62828":"#9CC800"}"></i></div></td><td class="num"${pa?' style="color:#b36b00;font-weight:700"':""}>${x.parado==null?"—":x.parado===0?"hoje":x.parado+" dia(s)"}</td></tr>`}).join("")+(it.length>14?`<tr><td class="muted">+ ${it.length-14} material(is)</td><td class="num muted">${fmt(it.slice(14).reduce((t,x)=>t+x.saldo,0))}</td><td colspan="3"></td></tr>`:""):`<tr><td colspan="5" class="muted">Sem saldo.</td></tr>`}</tbody></table></div></div>
-   <div style="flex:1 1 360px;min-width:0"><div class="mini" style="margin-bottom:12px"><div class="h"><em>Entradas × saídas · 14 dias (t)</em></div><div id="esg"></div>
+   <div style="flex:1 1 360px;min-width:0"><div class="mini" style="margin-bottom:12px"><div class="h"><em>Entradas × saídas · 14 dias (kg)</em></div><div id="esg"></div>
      <div class="legend" style="margin-top:6px"><span><i class="sw" style="background:#9CC800"></i>entrou</span><span><i class="sw" style="background:#111"></i>saiu (cargas)</span></div></div>
     <div class="mini"><div class="h"><em>Últimas saídas</em></div>${e.sai.length?e.sai.slice(0,6).map(x=>`<div class="li"><span>${brE(x.dh)} · ${esc(x.cli||x.p)}${x.cli?` <span class="muted" style="font-size:12px">${esc(x.p)}</span>`:""}</span><span style="text-align:right"><b>${fmt(x.kg)} kg</b>${x.val?` <span class="muted" style="font-size:12px">${rsE(x.val)}</span>`:""}${x.dif!=null?` <span style="font-size:12px;color:${Math.abs(x.dif)>=2?"#c62828":Math.abs(x.dif)>=1?"#b36b00":"#4c8a00"}">${x.dif>0?"+":""}${String(x.dif).replace(".",",")}%</span>`:""}</span></div>`).join(""):`<p class="muted">Nenhuma saída ainda.</p>`}
      <div class="muted" style="font-size:12px;margin-top:6px">% = diferença entre a balança e o peso médio dos fardos/bags, quando informadas as unidades</div></div></div></div>
